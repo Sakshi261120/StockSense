@@ -3,8 +3,6 @@ import os
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
-from sklearn.linear_model import LinearRegression  # 👈 Add this
-import numpy as np 
 
 # -------------------- Step 1: Page Configuration and Styling --------------------
 st.set_page_config(
