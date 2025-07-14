@@ -82,8 +82,40 @@ if menu == "Dashboard":
     st.plotly_chart(fig, use_container_width=True)
 
 elif menu == "Price Optimization":
-    st.header("💸 Price Optimization (Coming Soon)")
-    st.write("This section will have ML-based price suggestions soon.")
+    st.header("💸 Price Optimization")
+
+    st.markdown("Upload your sales data CSV with columns: **Revenue** and **Quantity_Sold** to get price suggestions.")
+
+    uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
+
+    if uploaded_file is not None:
+        data_uploaded = pd.read_csv(uploaded_file)
+
+        # Validate required columns
+        if not {'Revenue', 'Quantity_Sold'}.issubset(data_uploaded.columns):
+            st.error("CSV must contain 'Revenue' and 'Quantity_Sold' columns.")
+        else:
+            data_uploaded["Unit_Price"] = data_uploaded["Revenue"] / data_uploaded["Quantity_Sold"]
+            data_uploaded = data_uploaded.dropna()
+
+            X = data_uploaded["Quantity_Sold"].values.reshape(-1, 1)
+            y = data_uploaded["Unit_Price"].values
+
+            model = LinearRegression()
+            model.fit(X, y)
+
+            st.subheader("📊 Predict Optimal Price")
+            quantity = st.slider("Expected Quantity to Sell", 1, 1000, 100)
+
+            predicted_price = model.predict(np.array([[quantity]]))[0]
+            predicted_price = round(predicted_price, 2)
+
+            st.success(f"💰 Suggested Unit Price: ₹{predicted_price}")
+
+    else:
+        st.info("Please upload your sales data CSV file to see price suggestions.")
+
+
 
 elif menu == "Stock Alerts":
     st.header("📦 Stock Refill Alerts")
@@ -109,3 +141,4 @@ st.markdown(
     "<div style='text-align: center;'>Made with ❤️ using Streamlit | Project: MSIT405</div>",
     unsafe_allow_html=True,
 )
+
