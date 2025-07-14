@@ -121,14 +121,39 @@ elif menu == "Stock Alerts":
     st.header("📦 Stock Refill Alerts")
     threshold = st.slider("Set stock threshold", 0, 100, 20)
     low_stock = data[data["Stock_Remaining"] < threshold]
-    st.dataframe(low_stock[["Product_Name", "Stock_Remaining", "Quantity_Sold"]])
+
+    if low_stock.empty:
+        st.success("🎉 All products are well stocked.")
+    else:
+        st.warning(f"⚠️ {len(low_stock)} products are below the stock threshold of {threshold}. Please consider restocking.")
+        st.dataframe(low_stock[["Product_Name", "Stock_Remaining", "Quantity_Sold"]])
+
+        csv_low_stock = low_stock.to_csv(index=False)
+        st.download_button(
+            label="📥 Download Low Stock Report",
+            data=csv_low_stock,
+            file_name="low_stock_report.csv",
+            mime="text/csv"
+        )
 
 elif menu == "Expiry Alerts":
     st.header("⏰ Expiry Date Alerts")
     days = st.slider("Days to expiry", 1, 30, 7)
     expiring_soon = data[data["Days_To_Expiry"] <= days]
-    st.dataframe(expiring_soon[["Product_Name", "Expiry_Date", "Days_To_Expiry", "Stock_Remaining"]])
 
+    if expiring_soon.empty:
+        st.success(f"🎉 No products expiring in the next {days} days.")
+    else:
+        st.warning(f"⚠️ {len(expiring_soon)} products expiring in the next {days} days!")
+        st.dataframe(expiring_soon[["Product_Name", "Expiry_Date", "Days_To_Expiry", "Stock_Remaining"]])
+
+        csv_expiry = expiring_soon.to_csv(index=False)
+        st.download_button(
+            label="📥 Download Expiry Report",
+            data=csv_expiry,
+            file_name="expiry_report.csv",
+            mime="text/csv"
+        )
 elif menu == "Raw Data":
     st.header("📋 Raw Dataset")
     st.dataframe(data)
