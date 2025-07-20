@@ -138,6 +138,50 @@ elif menu == "Stock Alerts":
             mime="text/csv"
         )
 
+        # ----------- Email Sending Section ------------
+        st.subheader("📧 Send Low Stock Report to Email")
+        recipient = st.text_input("Enter recipient email address")
+        send_email = st.button("Send Email")
+
+        if send_email:
+            if recipient:
+                try:
+                    import smtplib
+                    from email.message import EmailMessage
+
+                    gmail_user = '6120sakshi@gmail.com'
+                    gmail_password = 'qrqyjfriijuizbop'  # Paste your App Password here (no spaces)
+
+                    # Create email
+                    msg = EmailMessage()
+                    msg['Subject'] = '⚠️ Low Stock Alert'
+                    msg['From'] = gmail_user
+                    msg['To'] = recipient
+                    msg.set_content(f"""
+Hi,
+
+Please find attached the low stock report.
+
+{len(low_stock)} products are below the threshold of {threshold}.
+
+Best,
+StockSense App
+                    """)
+
+                    # Add CSV as attachment
+                    msg.add_attachment(csv_low_stock, filename="low_stock_report.csv")
+
+                    # Send
+                    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+                        smtp.login(gmail_user, gmail_password)
+                        smtp.send_message(msg)
+
+                    st.success("✅ Email sent successfully!")
+                except Exception as e:
+                    st.error(f"❌ Failed to send email: {e}")
+            else:
+                st.warning("⚠️ Please enter a valid recipient email address.")
+
 elif menu == "Expiry Alerts":
     st.header("⏰ Expiry Date Alerts")
     days = st.slider("Days to expiry", 1, 30, 7)
