@@ -150,7 +150,7 @@ elif menu == "Stock Alerts":
                     from email.message import EmailMessage
 
                     gmail_user = '6120sakshi@gmail.com'
-                    gmail_password = 'qrqyjfriijuizbop'  # Paste your App Password here (no spaces)
+                    gmail_password = 'scnbsvbajhaltwus'  # Paste your App Password here (no spaces)
 
                     # Create email
                     msg = EmailMessage()
