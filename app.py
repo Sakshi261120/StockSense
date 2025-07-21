@@ -84,38 +84,48 @@ if menu == "Dashboard":
     st.plotly_chart(fig, use_container_width=True)
 
 elif menu == "Price Optimization":
-    st.header("💸 Price Optimization")
+    st.subheader("📊 Predict Optimal Price Using Uploaded CSV File")
 
-    st.markdown("Upload your sales data CSV with columns: **Revenue** and **Quantity_Sold** to get price suggestions.")
+    uploaded_file = st.file_uploader("📁 Upload a CSV file with a 'quantity' column", type=["csv"])
 
-    uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
+    try:
+        import pandas as pd
+        import numpy as np
+        import joblib
 
-    if uploaded_file is not None:
-        data_uploaded = pd.read_csv(uploaded_file)
+        # Load trained ML model
+        model = joblib.load("price_model.pkl")
 
-        # Validate required columns
-        if not {'Revenue', 'Quantity_Sold'}.issubset(data_uploaded.columns):
-            st.error("CSV must contain 'Revenue' and 'Quantity_Sold' columns.")
+        if uploaded_file is not None:
+            df = pd.read_csv(uploaded_file)
+
+            # Check if required column exists
+            if "quantity" in df.columns:
+                # Predict price for each row using ML model
+                df["predicted_price"] = model.predict(df[["quantity"]])
+                df["predicted_price"] = df["predicted_price"].round(2)
+
+                # Display results
+                st.success("✅ Prediction completed successfully!")
+                st.dataframe(df)
+
+                # Download button
+                csv = df.to_csv(index=False).encode("utf-8")
+                st.download_button(
+                    label="📥 Download Predicted Prices CSV",
+                    data=csv,
+                    file_name="predicted_prices.csv",
+                    mime="text/csv"
+                )
+            else:
+                st.error("❌ The uploaded CSV must contain a column named 'quantity'.")
         else:
-            data_uploaded["Unit_Price"] = data_uploaded["Revenue"] / data_uploaded["Quantity_Sold"]
-            data_uploaded = data_uploaded.dropna()
+            st.info("Please upload a CSV file to begin.")
+    except FileNotFoundError:
+        st.error("❌ 'price_model.pkl' not found. Please run 'train_price_model.py' first to train and save the model.")
+    except Exception as e:
+        st.error(f"❌ An error occurred: {e}")
 
-            X = data_uploaded["Quantity_Sold"].values.reshape(-1, 1)
-            y = data_uploaded["Unit_Price"].values
-
-            model = LinearRegression()
-            model.fit(X, y)
-
-            st.subheader("📊 Predict Optimal Price")
-            quantity = st.slider("Expected Quantity to Sell", 1, 1000, 100)
-
-            predicted_price = model.predict(np.array([[quantity]]))[0]
-            predicted_price = round(predicted_price, 2)
-
-            st.success(f"💰 Suggested Unit Price: ₹{predicted_price}")
-
-    else:
-        st.info("Please upload your sales data CSV file to see price suggestions.")
 
 
 
