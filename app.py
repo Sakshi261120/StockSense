@@ -84,47 +84,64 @@ if menu == "Dashboard":
     st.plotly_chart(fig, use_container_width=True)
 
 elif menu == "Price Optimization":
-    st.subheader("📊 Predict Optimal Price Using Uploaded CSV File")
+    st.subheader("🔧 Train Model & 📊 Predict Prices (End-to-End ML)")
 
-    uploaded_file = st.file_uploader("📁 Upload a CSV file with a 'quantity' column", type=["csv"])
+    # Section 1: Train the ML Model
+    st.markdown("### 🔧 Step 1: Train Price Model")
+    train_file = st.file_uploader("📁 Upload CSV to train model (must have 'quantity' and 'price')", type=["csv"], key="train")
 
-    try:
+    if train_file is not None:
         import pandas as pd
         import numpy as np
+        from sklearn.linear_model import LinearRegression
         import joblib
 
-        # Load trained ML model
+        try:
+            df_train = pd.read_csv(train_file)
+
+            if "quantity" in df_train.columns and "price" in df_train.columns:
+                X = df_train[["quantity"]]
+                y = df_train["price"]
+
+                # Train model
+                model = LinearRegression()
+                model.fit(X, y)
+
+                # Save model
+                joblib.dump(model, "price_model.pkl")
+                st.success("✅ Model trained and saved as 'price_model.pkl'")
+            else:
+                st.error("❌ CSV must contain both 'quantity' and 'price' columns.")
+        except Exception as e:
+            st.error(f"❌ Training failed: {e}")
+
+    # Section 2: Predict using trained model
+    st.markdown("### 📊 Step 2: Predict Optimal Prices")
+    pred_file = st.file_uploader("📁 Upload CSV with 'quantity' to predict price", type=["csv"], key="predict")
+
+    try:
+        import joblib
         model = joblib.load("price_model.pkl")
 
-        if uploaded_file is not None:
-            df = pd.read_csv(uploaded_file)
+        if pred_file is not None:
+            df_pred = pd.read_csv(pred_file)
 
-            # Check if required column exists
-            if "quantity" in df.columns:
-                # Predict price for each row using ML model
-                df["predicted_price"] = model.predict(df[["quantity"]])
-                df["predicted_price"] = df["predicted_price"].round(2)
+            if "quantity" in df_pred.columns:
+                df_pred["predicted_price"] = model.predict(df_pred[["quantity"]])
+                df_pred["predicted_price"] = df_pred["predicted_price"].round(2)
 
-                # Display results
-                st.success("✅ Prediction completed successfully!")
-                st.dataframe(df)
+                st.success("✅ Predictions generated:")
+                st.dataframe(df_pred)
 
-                # Download button
-                csv = df.to_csv(index=False).encode("utf-8")
-                st.download_button(
-                    label="📥 Download Predicted Prices CSV",
-                    data=csv,
-                    file_name="predicted_prices.csv",
-                    mime="text/csv"
-                )
+                csv = df_pred.to_csv(index=False).encode("utf-8")
+                st.download_button("📥 Download Results as CSV", data=csv, file_name="predicted_prices.csv", mime="text/csv")
             else:
-                st.error("❌ The uploaded CSV must contain a column named 'quantity'.")
-        else:
-            st.info("Please upload a CSV file to begin.")
+                st.error("❌ The uploaded CSV must contain a 'quantity' column.")
     except FileNotFoundError:
-        st.error("❌ 'price_model.pkl' not found. Please run 'train_price_model.py' first to train and save the model.")
+        st.info("ℹ️ No trained model found yet. Please upload training data above first.")
     except Exception as e:
-        st.error(f"❌ An error occurred: {e}")
+        st.error(f"❌ Prediction failed: {e}")
+
 
 
 
