@@ -46,11 +46,23 @@ st.title("Welcome to StockSense")
 
 @st.cache_data
 def load_data():
-    df = pd.read_csv("easyday_sales_dataset.csv")  # Ensure CSV is in the same folder
+    import sqlite3
+
+    # Connect to the SQLite database
+    conn = sqlite3.connect("retail_data.db")
+
+    # Read the data from the 'sales_data' table
+    df = pd.read_sql_query("SELECT * FROM sales_data", conn)
+
+    # Close connection
+    conn.close()
+
+    # Convert date columns and calculate expiry
     df["Date"] = pd.to_datetime(df["Date"])
     df["Expiry_Date"] = pd.to_datetime(df["Expiry_Date"])
     df["Days_To_Expiry"] = (df["Expiry_Date"] - pd.to_datetime("today")).dt.days
     return df
+
 
 data = load_data()
 
