@@ -64,30 +64,34 @@ def load_data():
         
 data = load_data()
 
-# --- ✅ Place the check here ---
-if data.empty:
-    st.warning("⚠️ No data available to display. Please check database connection or data source.")
-else:
-    total_revenue = data["Revenue"].sum()
-    total_items = data["Quantity_Sold"].sum()
-    unique_products = data["Product_Name"].nunique()
+if menu == "Dashboard":
+    if data.empty:
+        st.warning("⚠️ No data available to display. Please check database connection or data source.")
+    else:
+        total_revenue = data["Revenue"].sum()
+        total_items = data["Quantity_Sold"].sum()
+        unique_products = data["Product_Name"].nunique()
 
-    col1, col2, col3 = st.columns(3)
-    col1.metric("💰 Total Revenue", f"₹{total_revenue:,.2f}")
-    col2.metric("🛒 Items Sold", total_items)
-    col3.metric("📦 Unique Products", unique_products)
+        col1, col2, col3 = st.columns(3)
+        col1.metric("💰 Total Revenue", f"₹{total_revenue:,.2f}")
+        col2.metric("🛒 Items Sold", total_items)
+        col3.metric("📦 Unique Products", unique_products)
 
-    top_products = data.groupby("Product_Name")["Revenue"].sum().sort_values(ascending=False).head(10)
-    fig = px.bar(
-        top_products,
-        x=top_products.index,
-        y=top_products.values,
-        labels={"x": "Product", "y": "Revenue (₹)"},
-        title="💰 Top 10 Products by Revenue",
-        color_discrete_sequence=["#3498db"]
-    )
-    fig.update_layout(xaxis_tickangle=-45)  # Tilt x-axis labels for readability
-    st.plotly_chart(fig, use_container_width=True)
+        top_products = data.groupby("Product_Name")["Revenue"].sum().sort_values(ascending=False).head(10)
+        fig = px.bar(
+            top_products,
+            x=top_products.index,
+            y=top_products.values,
+            labels={"x": "Product", "y": "Revenue (₹)"},
+            title="💰 Top 10 Products by Revenue",
+            color_discrete_sequence=["#3498db"]
+        )
+        fig.update_layout(xaxis_tickangle=-45)
+        st.plotly_chart(fig, use_container_width=True)
+
+elif menu == "Price Optimization":
+    # price optimization logic...
+
 
 elif menu == "Price Optimization":
     st.subheader("🔧 Train Model & 📊 Predict Prices (End-to-End ML)")
