@@ -64,14 +64,10 @@ def load_data():
         
 data = load_data()
 
-if menu == "Dashboard":
-    st.header("📊 Retail Sales Dashboard")
-    st.markdown(
-        """
-        This dashboard shows key metrics on total revenue, units sold, and product variety.  
-        Explore the top-selling products by revenue below.
-        """
-    )
+# --- ✅ Place the check here ---
+if data.empty:
+    st.warning("⚠️ No data available to display. Please check database connection or data source.")
+else:
     total_revenue = data["Revenue"].sum()
     total_items = data["Quantity_Sold"].sum()
     unique_products = data["Product_Name"].nunique()
