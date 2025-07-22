@@ -90,10 +90,6 @@ if menu == "Dashboard":
         st.plotly_chart(fig, use_container_width=True)
 
 elif menu == "Price Optimization":
-    # price optimization logic...
-
-
-elif menu == "Price Optimization":
     st.subheader("🔧 Train Model & 📊 Predict Prices (End-to-End ML)")
 
     # Section 1: Train the ML Model
@@ -151,10 +147,6 @@ elif menu == "Price Optimization":
         st.info("ℹ️ No trained model found yet. Please upload training data above first.")
     except Exception as e:
         st.error(f"❌ Prediction failed: {e}")
-
-
-
-
 
 elif menu == "Stock Alerts":
     st.header("📦 Stock Refill Alerts")
