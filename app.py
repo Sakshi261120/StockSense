@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 import pandas as pd
+import sqlite3  # <-- Add this here!
 import plotly.express as px
 from datetime import datetime
 from sklearn.linear_model import LinearRegression
@@ -60,7 +61,7 @@ def load_data():
     except Exception as e:
         st.error(f"Error loading data from DB: {e}")
         return pd.DataFrame()  # Return empty DataFrame if error
-
+        
 data = load_data()
 
 if menu == "Dashboard":
