@@ -46,23 +46,20 @@ st.title("Welcome to StockSense")
 
 @st.cache_data
 def load_data():
-    import sqlite3
+    try:
+        conn = sqlite3.connect("retail_data.db")
+        df = pd.read_sql_query("SELECT * FROM sales_data", conn)
+        conn.close()
 
-    # Connect to the SQLite database
-    conn = sqlite3.connect("retail_data.db")
+        # Process date columns
+        df["Date"] = pd.to_datetime(df["Date"])
+        df["Expiry_Date"] = pd.to_datetime(df["Expiry_Date"])
+        df["Days_To_Expiry"] = (df["Expiry_Date"] - pd.to_datetime("today")).dt.days
+        return df
 
-    # Read the data from the 'sales_data' table
-    df = pd.read_sql_query("SELECT * FROM sales_data", conn)
-
-    # Close connection
-    conn.close()
-
-    # Convert date columns and calculate expiry
-    df["Date"] = pd.to_datetime(df["Date"])
-    df["Expiry_Date"] = pd.to_datetime(df["Expiry_Date"])
-    df["Days_To_Expiry"] = (df["Expiry_Date"] - pd.to_datetime("today")).dt.days
-    return df
-
+    except Exception as e:
+        st.error(f"Error loading data from DB: {e}")
+        return pd.DataFrame()  # Return empty DataFrame if error
 
 data = load_data()
 
