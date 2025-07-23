@@ -44,23 +44,6 @@ st.sidebar.markdown("Developed by: **Garima**")
 # -------------------- Main App --------------------
 st.write("Current working directory:", os.getcwd())
 st.title("Welcome to StockSense")
-
-@st.cache_data
-def load_data():
-    try:
-        conn = sqlite3.connect("retail_data.db")
-        df = pd.read_sql_query("SELECT * FROM sales_data", conn)
-        conn.close()
-
-        # Process date columns
-        df["Date"] = pd.to_datetime(df["Date"])
-        df["Expiry_Date"] = pd.to_datetime(df["Expiry_Date"])
-        df["Days_To_Expiry"] = (df["Expiry_Date"] - pd.to_datetime("today")).dt.days
-        return df
-
-    except Exception as e:
-        st.error(f"Error loading data from DB: {e}")
-        return pd.DataFrame()  # Return empty DataFrame if error
         
 data = load_data()
 
