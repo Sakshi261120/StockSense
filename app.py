@@ -47,6 +47,9 @@ st.write("Current working directory:", os.getcwd())
 st.title("Welcome to StockSense")
         
 data = load_data()
+import streamlit as st
+
+st.write("Number of rows loaded from DB:", len(data))
 
 if menu == "Dashboard":
     if data.empty:
