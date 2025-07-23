@@ -6,6 +6,7 @@ import plotly.express as px
 from datetime import datetime
 from sklearn.linear_model import LinearRegression
 import numpy as np
+from db_utils import load_data
 
 # -------------------- Step 1: Page Configuration and Styling --------------------
 st.set_page_config(
