@@ -74,7 +74,13 @@ if uploaded_file is not None:
         st.stop()
 
 else:
-    st.info("📁 Please upload a CSV file to begin.")
+    # User has NOT uploaded file, fallback to database load_data()
+    data = load_data()
+    if data.empty:
+        st.warning("⚠️ No data available in database.")
+    else:
+        st.info(f"ℹ️ Loaded {len(data)} rows from database.")
+
 
 
 if menu == "Dashboard":
