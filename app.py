@@ -121,7 +121,7 @@ elif menu == "Price Optimization":
 
     # Section 1: Train the ML Model
     st.markdown("### 🔧 Step 1: Train Price Model")
-    train_file = st.file_uploader("📁 Upload CSV to train model (must have 'Quantity_Sold' and 'Unit_price')", type=["csv"], key="train")
+    train_file = st.file_uploader("📁 Upload CSV to train model (must have 'Quantity_Sold' and 'Unit_Price')", type=["csv"], key="train")
 
     if train_file is not None:
         import pandas as pd
@@ -132,9 +132,9 @@ elif menu == "Price Optimization":
         try:
             df_train = pd.read_csv(train_file)
 
-            if "Quantity_Sold" in df_train.columns and "Unit_price" in df_train.columns:
-                X = df_train[["Quantity_sold"]]
-                y = df_train["Unit_price"]
+            if "Quantity_Sold" in df_train.columns and "Unit_Price" in df_train.columns:
+                X = df_train[["Quantity_Sold"]]
+                y = df_train["Unit_Price"]
 
                 # Train model
                 model = LinearRegression()
@@ -144,7 +144,7 @@ elif menu == "Price Optimization":
                 joblib.dump(model, "price_model.pkl")
                 st.success("✅ Model trained and saved as 'price_model.pkl'")
             else:
-                st.error("❌ CSV must contain both 'Quantity_Sold' and 'Unit_price' columns.")
+                st.error("❌ CSV must contain both 'Quantity_Sold' and 'Unit_Price' columns.")
         except Exception as e:
             st.error(f"❌ Training failed: {e}")
 
