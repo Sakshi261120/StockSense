@@ -133,8 +133,8 @@ elif menu == "Price Optimization":
             df_train = pd.read_csv(train_file)
 
             if "quantity" in df_train.columns and "price" in df_train.columns:
-                X = df_train[["quantity"]]
-                y = df_train["price"]
+                X = df_train[["Quantity_sold"]]
+                y = df_train["Unit_price"]
 
                 # Train model
                 model = LinearRegression()
