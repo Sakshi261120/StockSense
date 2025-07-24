@@ -54,13 +54,20 @@ if uploaded_file is not None:
     try:
         data = pd.read_csv(uploaded_file)
 
-        # ✅ Validate required columns
-        required_cols = ["Product_Name", "Revenue", "Quantity_Sold", "Stock_Remaining", "Expiry_Date", "Discount"]
+        # Validate columns (your existing check)
+        required_cols = ["Product_Name", "Revenue", "Quantity_Sold", "Stock_Remaining", "Expiry_Date"]
         missing_cols = [col for col in required_cols if col not in data.columns]
-        
         if missing_cols:
             st.error(f"❌ Your file is missing required columns: {', '.join(missing_cols)}")
             st.stop()
+
+        # Convert Expiry_Date to datetime
+        data['Expiry_Date'] = pd.to_datetime(data['Expiry_Date'], errors='coerce')
+
+        # Calculate Days_To_Expiry
+        from datetime import datetime
+        today = pd.to_datetime(datetime.today().date())
+        data['Days_To_Expiry'] = (data['Expiry_Date'] - today).dt.days
 
         if data.empty:
             st.warning("⚠️ The uploaded file is empty.")
@@ -72,6 +79,7 @@ if uploaded_file is not None:
     except Exception as e:
         st.error(f"❌ Error reading file: {e}")
         st.stop()
+
 
 else:
     # User has NOT uploaded file, fallback to database load_data()
