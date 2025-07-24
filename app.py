@@ -46,10 +46,24 @@ st.sidebar.markdown("Developed by: **Garima**")
 st.write("Current working directory:", os.getcwd())
 st.title("Welcome to StockSense")
         
-data = load_data()
-import streamlit as st
+from db_utils import load_data
 
-st.write("Number of rows loaded from DB:", len(data))
+# Upload logic
+uploaded_file = st.sidebar.file_uploader("📁 Upload your CSV", type=["csv"])
+
+if uploaded_file:
+    try:
+        data = pd.read_csv(uploaded_file)
+        st.sidebar.success(f"✅ Loaded {len(data)} rows from uploaded file.")
+        st.session_state["data"] = data
+    except Exception as e:
+        st.sidebar.error(f"❌ Failed to read file: {e}")
+        data = pd.DataFrame()
+elif "data" in st.session_state:
+    data = st.session_state["data"]
+else:
+    data = load_data()
+    st.sidebar.info(f"ℹ️ Loaded {len(data)} rows from database.")
 
 if menu == "Dashboard":
     if data.empty:
