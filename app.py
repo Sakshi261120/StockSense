@@ -55,7 +55,7 @@ if uploaded_file is not None:
         data = pd.read_csv(uploaded_file)
 
         # ✅ Validate required columns
-        required_cols = ["Product_Name", "Revenue", "Quantity_Sold", "Stock_Remaining", "Expiry_Date", "Days_To_Expiry"]
+        required_cols = ["Product_Name", "Revenue", "Quantity_Sold", "Stock_Remaining", "Expiry_Date", "Discount"]
         missing_cols = [col for col in required_cols if col not in data.columns]
         
         if missing_cols:
