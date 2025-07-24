@@ -40,7 +40,7 @@ menu = st.sidebar.radio(
     ["Dashboard", "Price Optimization", "Stock Alerts", "Expiry Alerts", "Raw Data"]
 )
 st.sidebar.markdown("---")
-st.sidebar.markdown("Developed by: **Garima**")
+st.sidebar.markdown("Developed by: **GROUP 1**")
 
 # -------------------- Main App --------------------
 st.write("Current working directory:", os.getcwd())
