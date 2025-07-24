@@ -51,18 +51,31 @@ from db_utils import load_data
 uploaded_file = st.file_uploader("Upload your sales data CSV file", type=["csv"])
 
 if uploaded_file is not None:
-    data = pd.read_csv(uploaded_file)
+    try:
+        data = pd.read_csv(uploaded_file)
 
-    # 🔍 NEW CODE: Check for required columns
-    required_cols = ["Product_Name", "Revenue", "Quantity_Sold", "Stock_Remaining", "Expiry_Date", "Days_To_Expiry"]
-    missing_cols = [col for col in required_cols if col not in data.columns]
-    
-    if missing_cols:
-        st.error(f"❌ Your file is missing required columns: {', '.join(missing_cols)}")
-        st.stop()  # Prevent the rest of the code from running
+        # ✅ Validate required columns
+        required_cols = ["Product_Name", "Revenue", "Quantity_Sold", "Stock_Remaining", "Expiry_Date", "Days_To_Expiry"]
+        missing_cols = [col for col in required_cols if col not in data.columns]
+        
+        if missing_cols:
+            st.error(f"❌ Your file is missing required columns: {', '.join(missing_cols)}")
+            st.stop()
 
-    st.success("✅ File uploaded successfully!")
-    st.write("Your file has these columns:", list(data.columns))
+        if data.empty:
+            st.warning("⚠️ The uploaded file is empty.")
+            st.stop()
+
+        st.success("✅ File uploaded successfully!")
+        st.write("Your data preview:", data.head())
+
+    except Exception as e:
+        st.error(f"❌ Error reading file: {e}")
+        st.stop()
+
+else:
+    st.info("📁 Please upload a CSV file to begin.")
+
 
 if menu == "Dashboard":
     if data.empty:
