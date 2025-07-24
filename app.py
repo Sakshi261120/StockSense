@@ -48,22 +48,21 @@ st.title("Welcome to StockSense")
         
 from db_utils import load_data
 
-# Upload logic
-uploaded_file = st.sidebar.file_uploader("📁 Upload your CSV", type=["csv"])
+uploaded_file = st.file_uploader("Upload your sales data CSV file", type=["csv"])
 
-if uploaded_file:
-    try:
-        data = pd.read_csv(uploaded_file)
-        st.sidebar.success(f"✅ Loaded {len(data)} rows from uploaded file.")
-        st.session_state["data"] = data
-    except Exception as e:
-        st.sidebar.error(f"❌ Failed to read file: {e}")
-        data = pd.DataFrame()
-elif "data" in st.session_state:
-    data = st.session_state["data"]
-else:
-    data = load_data()
-    st.sidebar.info(f"ℹ️ Loaded {len(data)} rows from database.")
+if uploaded_file is not None:
+    data = pd.read_csv(uploaded_file)
+
+    # 🔍 NEW CODE: Check for required columns
+    required_cols = ["Product_Name", "Revenue", "Quantity_Sold", "Stock_Remaining", "Expiry_Date", "Days_To_Expiry"]
+    missing_cols = [col for col in required_cols if col not in data.columns]
+    
+    if missing_cols:
+        st.error(f"❌ Your file is missing required columns: {', '.join(missing_cols)}")
+        st.stop()  # Prevent the rest of the code from running
+
+    st.success("✅ File uploaded successfully!")
+    st.write("Your file has these columns:", list(data.columns))
 
 if menu == "Dashboard":
     if data.empty:
