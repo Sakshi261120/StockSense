@@ -268,4 +268,56 @@ st.markdown(
     "<div style='text-align: center;'>Made with ❤️ using Streamlit | Project: MSIT405</div>",
     unsafe_allow_html=True,
 )
+elif menu == "Notifications":
+    st.header("🔔 Unified Notification Center")
+
+    # Connect to the database
+    conn = sqlite3.connect("retail_data.db")
+    cursor = conn.cursor()
+
+    # Generate alerts from data
+    stock_threshold = 20
+    expiry_days = 7
+
+    stock_alerts = data[data["Stock_Remaining"] < stock_threshold]
+    expiry_alerts = data[data["Days_To_Expiry"] <= expiry_days]
+
+    total_alerts = len(stock_alerts) + len(expiry_alerts)
+
+    if total_alerts == 0:
+        st.success("✅ All good! No stock or expiry alerts.")
+    else:
+        st.warning(f"⚠️ You have {total_alerts} active alerts.")
+
+        st.subheader("📦 Stock Alerts")
+        for _, row in stock_alerts.iterrows():
+            st.markdown(f"🟥 **{row['Product_Name']}** is low on stock (Only {row['Stock_Remaining']} left).")
+            
+            try:
+                from barcode import Code128
+                from barcode.writer import ImageWriter
+                from PIL import Image
+                from io import BytesIO
+
+                buffer = BytesIO()
+                Code128(row['Product_Name'], writer=ImageWriter()).write(buffer)
+                buffer.seek(0)
+                st.image(Image.open(buffer), width=150)
+            except:
+                st.text("Barcode unavailable")
+
+        st.subheader("⏰ Expiry Alerts")
+        for _, row in expiry_alerts.iterrows():
+            st.markdown(f"🟨 **{row['Product_Name']}** is expiring in {row['Days_To_Expiry']} days (Expiry: {row['Expiry_Date'].date()}).")
+            
+            try:
+                buffer = BytesIO()
+                Code128(row['Product_Name'], writer=ImageWriter()).write(buffer)
+                buffer.seek(0)
+                st.image(Image.open(buffer), width=150)
+            except:
+                st.text("Barcode unavailable")
+
+    conn.close()
+
 
