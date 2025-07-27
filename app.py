@@ -253,7 +253,8 @@ elif menu == "Expiry Alerts":
             data=csv_expiry,
             file_name="expiry_report.csv",
             mime="text/csv"
-        )
+        )   # <-- this closing parenthesis ends the st.download_button call correctly
+
 elif menu == "Notifications":
     st.subheader("Notification Alerts")
     st.write("This page displays barcode alerts.")
