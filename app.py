@@ -271,11 +271,6 @@ st.markdown(
 elif menu == "Notifications":
     st.header("🔔 Unified Notification Center")
 
-    # Connect to the database
-    conn = sqlite3.connect("retail_data.db")
-    cursor = conn.cursor()
-
-    # Generate alerts from data
     stock_threshold = 20
     expiry_days = 7
 
@@ -292,7 +287,7 @@ elif menu == "Notifications":
         st.subheader("📦 Stock Alerts")
         for _, row in stock_alerts.iterrows():
             st.markdown(f"🟥 **{row['Product_Name']}** is low on stock (Only {row['Stock_Remaining']} left).")
-            
+
             try:
                 from barcode import Code128
                 from barcode.writer import ImageWriter
@@ -300,24 +295,22 @@ elif menu == "Notifications":
                 from io import BytesIO
 
                 buffer = BytesIO()
-                Code128(row['Product_Name'], writer=ImageWriter()).write(buffer)
+                Code128(str(row['Product_Name']), writer=ImageWriter()).write(buffer)
                 buffer.seek(0)
                 st.image(Image.open(buffer), width=150)
-            except:
-                st.text("Barcode unavailable")
+            except Exception as e:
+                st.text(f"Barcode unavailable: {e}")
 
         st.subheader("⏰ Expiry Alerts")
         for _, row in expiry_alerts.iterrows():
             st.markdown(f"🟨 **{row['Product_Name']}** is expiring in {row['Days_To_Expiry']} days (Expiry: {row['Expiry_Date'].date()}).")
-            
+
             try:
                 buffer = BytesIO()
-                Code128(row['Product_Name'], writer=ImageWriter()).write(buffer)
+                Code128(str(row['Product_Name']), writer=ImageWriter()).write(buffer)
                 buffer.seek(0)
                 st.image(Image.open(buffer), width=150)
-            except:
-                st.text("Barcode unavailable")
-
-    conn.close()
+            except Exception as e:
+                st.text(f"Barcode unavailable: {e}")
 
 
