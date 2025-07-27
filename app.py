@@ -89,8 +89,6 @@ else:
     else:
         st.info(f"ℹ️ Loaded {len(data)} rows from database.")
 
-
-
 if menu == "Dashboard":
     if data.empty:
         st.warning("⚠️ No data available to display. Please check database connection or data source.")
@@ -255,22 +253,15 @@ elif menu == "Expiry Alerts":
             data=csv_expiry,
             file_name="expiry_report.csv",
             mime="text/csv"
-        )
-elif menu == "Raw Data":
-    st.header("📋 Raw Dataset")
-    st.dataframe(data)
-    csv = data.to_csv(index=False)
-    st.download_button("Download CSV", csv, "easyday_sales_dataset.csv")
-
-# -------------------- Footer --------------------
-st.markdown("---")
-st.markdown(
-    "<div style='text-align: center;'>Made with ❤️ using Streamlit | Project: MSIT405</div>",
-    unsafe_allow_html=True,
-)
+            
 elif menu == "Notifications":
     st.header("🔔 Unified Notification Center")
 
+    # Connect to the database
+    conn = sqlite3.connect("retail_data.db")
+    cursor = conn.cursor()
+
+    # Generate alerts from data
     stock_threshold = 20
     expiry_days = 7
 
@@ -287,7 +278,7 @@ elif menu == "Notifications":
         st.subheader("📦 Stock Alerts")
         for _, row in stock_alerts.iterrows():
             st.markdown(f"🟥 **{row['Product_Name']}** is low on stock (Only {row['Stock_Remaining']} left).")
-
+            
             try:
                 from barcode import Code128
                 from barcode.writer import ImageWriter
@@ -295,22 +286,40 @@ elif menu == "Notifications":
                 from io import BytesIO
 
                 buffer = BytesIO()
-                Code128(str(row['Product_Name']), writer=ImageWriter()).write(buffer)
+                Code128(row['Product_Name'], writer=ImageWriter()).write(buffer)
                 buffer.seek(0)
                 st.image(Image.open(buffer), width=150)
-            except Exception as e:
-                st.text(f"Barcode unavailable: {e}")
+            except:
+                st.text("Barcode unavailable")
 
         st.subheader("⏰ Expiry Alerts")
         for _, row in expiry_alerts.iterrows():
             st.markdown(f"🟨 **{row['Product_Name']}** is expiring in {row['Days_To_Expiry']} days (Expiry: {row['Expiry_Date'].date()}).")
-
+            
             try:
                 buffer = BytesIO()
-                Code128(str(row['Product_Name']), writer=ImageWriter()).write(buffer)
+                Code128(row['Product_Name'], writer=ImageWriter()).write(buffer)
                 buffer.seek(0)
                 st.image(Image.open(buffer), width=150)
-            except Exception as e:
-                st.text(f"Barcode unavailable: {e}")
+            except:
+                st.text("Barcode unavailable")
+
+    conn.close()
+
+        )
+elif menu == "Raw Data":
+    st.header("📋 Raw Dataset")
+    st.dataframe(data)
+    csv = data.to_csv(index=False)
+    st.download_button("Download CSV", csv, "easyday_sales_dataset.csv")
+
+# -------------------- Footer --------------------
+st.markdown("---")
+st.markdown(
+    "<div style='text-align: center;'>Made with ❤️ using Streamlit | Project: MSIT405</div>",
+    unsafe_allow_html=True,
+)
+
+
 
 
