@@ -306,8 +306,8 @@ elif menu == "Notifications":
                 st.text("Barcode unavailable")
 
     conn.close()
-
     )
+     
 elif menu == "Raw Data":
     st.header("📋 Raw Dataset")
     st.dataframe(data)
