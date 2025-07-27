@@ -1,14 +1,20 @@
 import streamlit as st
 import os
 import pandas as pd
-import sqlite3  # <-- Add this here!
+import sqlite3
 import plotly.express as px
 from datetime import datetime
 from sklearn.linear_model import LinearRegression
 import numpy as np
+import joblib
 from db_utils import load_data
 from notifications import generate_stock_alerts, generate_expiry_alerts
-
+from barcode import Code128
+from barcode.writer import ImageWriter
+from PIL import Image
+from io import BytesIO
+import smtplib
+from email.message import EmailMessage
 
 # -------------------- Step 1: Page Configuration and Styling --------------------
 st.set_page_config(
@@ -17,8 +23,7 @@ st.set_page_config(
     page_icon="📊"
 )
 
-st.markdown(
-    """
+st.markdown("""
     <style>
     .main {
         background-color: #f7f9fc;
@@ -31,35 +36,15 @@ st.markdown(
         padding-bottom: 2rem;
     }
     </style>
-    """,
-    unsafe_allow_html=True,
-)
+    """, unsafe_allow_html=True)
 
-# -------------------- Step 2: Sidebar Navigation --------------------
-# Temporary default value (replace this with your actual alert count logic later)
-total_alerts_count = 0
-
-# Define the menu list, including notification icon with count
-menu_labels = [
-    "Dashboard",
-    "Price Optimization",
-    "Stock Alerts",
-    "Expiry Alerts",
-    "Raw Data",
-    f"🔔 Notifications ({total_alerts_count})" if total_alerts_count > 0 else "🔔 Notifications"
-]
-st.sidebar.markdown("## 📌 Navigation")
-menu = st.sidebar.radio("Go to", menu_labels)
-
-
-st.sidebar.markdown("---")
-st.sidebar.markdown("Developed by: **GROUP 1**")
-
-# -------------------- Main App --------------------
-st.write("Current working directory:", os.getcwd())
 st.title("Welcome to StockSense")
-        
-from db_utils import load_data
+st.write("Current working directory:", os.getcwd())
+
+# -------------------- Step 2: Load Data (Upload or DB) and Prepare Alerts --------------------
+
+stock_threshold = 20
+expiry_days = 7
 
 uploaded_file = st.file_uploader("Upload your sales data CSV file", type=["csv"])
 
@@ -67,18 +52,15 @@ if uploaded_file is not None:
     try:
         data = pd.read_csv(uploaded_file)
 
-        # Validate columns (your existing check)
+        # Check required columns
         required_cols = ["Product_Name", "Revenue", "Quantity_Sold", "Stock_Remaining", "Expiry_Date"]
         missing_cols = [col for col in required_cols if col not in data.columns]
         if missing_cols:
             st.error(f"❌ Your file is missing required columns: {', '.join(missing_cols)}")
             st.stop()
 
-        # Convert Expiry_Date to datetime
+        # Process expiry date
         data['Expiry_Date'] = pd.to_datetime(data['Expiry_Date'], errors='coerce')
-
-        # Calculate Days_To_Expiry
-        from datetime import datetime
         today = pd.to_datetime(datetime.today().date())
         data['Days_To_Expiry'] = (data['Expiry_Date'] - today).dt.days
 
@@ -93,36 +75,46 @@ if uploaded_file is not None:
         st.error(f"❌ Error reading file: {e}")
         st.stop()
 
-
 else:
-    # User has NOT uploaded file, fallback to database load_data()
+    # Load from database fallback
     data = load_data()
-
-    # ---------------- Calculate alert counts for Notifications menu ----------------
-    stock_threshold = 20  # Customize this threshold if needed
-    expiry_days = 7       # Customize expiry window in days
-
-    # Ensure data exists before trying to compute alerts
     if data is not None and not data.empty:
-        stock_alerts_count = len(data[data["Stock_Remaining"] < stock_threshold])
-        expiry_alerts_count = len(data[data["Days_To_Expiry"] <= expiry_days])
-    else:
-        stock_alerts_count = 0
-        expiry_alerts_count = 0
-
-    total_alerts_count = stock_alerts_count + expiry_alerts_count
-
-    if data.empty:
-        st.warning("⚠️ No data available in database.")
-    else:
+        # Process expiry date similarly
+        data['Expiry_Date'] = pd.to_datetime(data['Expiry_Date'], errors='coerce')
+        today = pd.to_datetime(datetime.today().date())
+        data['Days_To_Expiry'] = (data['Expiry_Date'] - today).dt.days
         st.info(f"ℹ️ Loaded {len(data)} rows from database.")
+    else:
+        st.warning("⚠️ No data available from database.")
+        data = pd.DataFrame(columns=["Product_Name", "Revenue", "Quantity_Sold", "Stock_Remaining", "Expiry_Date", "Days_To_Expiry"])
 
+# Calculate alert counts for sidebar notification
+stock_alerts_count = len(data[data["Stock_Remaining"] < stock_threshold])
+expiry_alerts_count = len(data[data["Days_To_Expiry"] <= expiry_days])
+total_alerts_count = stock_alerts_count + expiry_alerts_count
+
+# -------------------- Step 3: Sidebar Navigation --------------------
+
+menu_labels = [
+    "Dashboard",
+    "Price Optimization",
+    "Stock Alerts",
+    "Expiry Alerts",
+    "Raw Data",
+    f"🔔 Notifications ({total_alerts_count})" if total_alerts_count > 0 else "🔔 Notifications"
+]
+
+st.sidebar.markdown("## 📌 Navigation")
+menu = st.sidebar.radio("Go to", menu_labels)
+st.sidebar.markdown("---")
+st.sidebar.markdown("Developed by: **GROUP 1**")
+
+# -------------------- Step 4: Main App Logic --------------------
 
 if menu == "Dashboard":
     if data.empty:
-        st.warning("⚠️ No data available to display. Please check database connection or data source.")
+        st.warning("⚠️ No data available to display. Please check your data source.")
     else:
-        # --- Your existing dashboard metrics ---
         total_revenue = data["Revenue"].sum()
         total_items = data["Quantity_Sold"].sum()
         unique_products = data["Product_Name"].nunique()
@@ -132,34 +124,23 @@ if menu == "Dashboard":
         col2.metric("🛒 Items Sold", total_items)
         col3.metric("📦 Unique Products", unique_products)
 
-        # --- Add notification summary here ---
-        stock_threshold = 20
-        expiry_days = 7
-
-        stock_alerts = data[data["Stock_Remaining"] < stock_threshold]
-        expiry_alerts = data[data["Days_To_Expiry"] <= expiry_days]
-
-        total_alerts = len(stock_alerts) + len(expiry_alerts)
-
-        if total_alerts == 0:
+        # Show alert summary bar on dashboard
+        if total_alerts_count == 0:
             st.success("✅ All good! No stock or expiry alerts.")
         else:
-            # Display notification bar with counts and icons
-            st.markdown(
-                f"""<div style="
-                    background-color: #f9d6d5; 
-                    padding: 10px; 
-                    border-radius: 5px; 
-                    font-weight: bold;
-                    color: #b71c1c;">
-                    ⚠️ You have {total_alerts} important alert(s):
-                    🟥 {len(stock_alerts)} low stock items,
-                    🟨 {len(expiry_alerts)} expiring soon items.
-                </div>""",
-                unsafe_allow_html=True
-            )
+            st.markdown(f"""
+            <div style="
+                background-color: #f9d6d5; 
+                padding: 10px; 
+                border-radius: 5px; 
+                font-weight: bold;
+                color: #b71c1c;">
+                ⚠️ You have {total_alerts_count} important alert(s):
+                🟥 {stock_alerts_count} low stock items,
+                🟨 {expiry_alerts_count} expiring soon items.
+            </div>""", unsafe_allow_html=True)
 
-        # --- Continue with your top products bar chart ---
+        # Top 10 products bar chart
         top_products = data.groupby("Product_Name")["Revenue"].sum().sort_values(ascending=False).head(10)
         fig = px.bar(
             top_products,
@@ -172,32 +153,19 @@ if menu == "Dashboard":
         fig.update_layout(xaxis_tickangle=-45)
         st.plotly_chart(fig, use_container_width=True)
 
-
 elif menu == "Price Optimization":
     st.subheader("🔧 Train Model & 📊 Predict Prices (End-to-End ML)")
 
-    # Section 1: Train the ML Model
-    st.markdown("### 🔧 Step 1: Train Price Model")
     train_file = st.file_uploader("📁 Upload CSV to train model (must have 'Quantity_Sold' and 'Unit_Price')", type=["csv"], key="train")
 
     if train_file is not None:
-        import pandas as pd
-        import numpy as np
-        from sklearn.linear_model import LinearRegression
-        import joblib
-
         try:
             df_train = pd.read_csv(train_file)
-
             if "Quantity_Sold" in df_train.columns and "Unit_Price" in df_train.columns:
                 X = df_train[["Quantity_Sold"]]
                 y = df_train["Unit_Price"]
-
-                # Train model
                 model = LinearRegression()
                 model.fit(X, y)
-
-                # Save model
                 joblib.dump(model, "price_model.pkl")
                 st.success("✅ Model trained and saved as 'price_model.pkl'")
             else:
@@ -205,24 +173,16 @@ elif menu == "Price Optimization":
         except Exception as e:
             st.error(f"❌ Training failed: {e}")
 
-    # Section 2: Predict using trained model
-    st.markdown("### 📊 Step 2: Predict Optimal Prices")
     pred_file = st.file_uploader("📁 Upload CSV with 'Quantity_Sold' to predict price", type=["csv"], key="predict")
 
     try:
-        import joblib
         model = joblib.load("price_model.pkl")
-
         if pred_file is not None:
             df_pred = pd.read_csv(pred_file)
-
             if "Quantity_Sold" in df_pred.columns:
-                df_pred["predicted_price"] = model.predict(df_pred[["Quantity_Sold"]])
-                df_pred["predicted_price"] = df_pred["predicted_price"].round(2)
-
+                df_pred["predicted_price"] = model.predict(df_pred[["Quantity_Sold"]]).round(2)
                 st.success("✅ Predictions generated:")
                 st.dataframe(df_pred)
-
                 csv = df_pred.to_csv(index=False).encode("utf-8")
                 st.download_button("📥 Download Results as CSV", data=csv, file_name="predicted_prices.csv", mime="text/csv")
             else:
@@ -234,7 +194,7 @@ elif menu == "Price Optimization":
 
 elif menu == "Stock Alerts":
     st.header("📦 Stock Refill Alerts")
-    threshold = st.slider("Set stock threshold", 0, 100, 20)
+    threshold = st.slider("Set stock threshold", 0, 100, stock_threshold)
     low_stock = data[data["Stock_Remaining"] < threshold]
 
     if low_stock.empty:
@@ -244,14 +204,8 @@ elif menu == "Stock Alerts":
         st.dataframe(low_stock[["Product_Name", "Stock_Remaining", "Quantity_Sold"]])
 
         csv_low_stock = low_stock.to_csv(index=False)
-        st.download_button(
-            label="📥 Download Low Stock Report",
-            data=csv_low_stock,
-            file_name="low_stock_report.csv",
-            mime="text/csv"
-        )
+        st.download_button("📥 Download Low Stock Report", data=csv_low_stock, file_name="low_stock_report.csv", mime="text/csv")
 
-        # ----------- Email Sending Section ------------
         st.subheader("📧 Send Low Stock Report to Email")
         recipient = st.text_input("Enter recipient email address")
         send_email = st.button("Send Email")
@@ -259,13 +213,9 @@ elif menu == "Stock Alerts":
         if send_email:
             if recipient:
                 try:
-                    import smtplib
-                    from email.message import EmailMessage
-
                     gmail_user = '6120sakshi@gmail.com'
-                    gmail_password = 'scnbsvbajhaltwus'  # Paste your App Password here (no spaces)
+                    gmail_password = 'scnbsvbajhaltwus'  # Your app password here
 
-                    # Create email
                     msg = EmailMessage()
                     msg['Subject'] = '⚠️ Low Stock Alert'
                     msg['From'] = gmail_user
@@ -281,10 +231,8 @@ Best,
 StockSense App
                     """)
 
-                    # Add CSV as attachment
                     msg.add_attachment(csv_low_stock, filename="low_stock_report.csv")
 
-                    # Send
                     with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
                         smtp.login(gmail_user, gmail_password)
                         smtp.send_message(msg)
@@ -297,7 +245,7 @@ StockSense App
 
 elif menu == "Expiry Alerts":
     st.header("⏰ Expiry Date Alerts")
-    days = st.slider("Days to expiry", 1, 30, 7)
+    days = st.slider("Days to expiry", 1, 30, expiry_days)
     expiring_soon = data[data["Days_To_Expiry"] <= days]
 
     if expiring_soon.empty:
@@ -307,60 +255,35 @@ elif menu == "Expiry Alerts":
         st.dataframe(expiring_soon[["Product_Name", "Expiry_Date", "Days_To_Expiry", "Stock_Remaining"]])
 
         csv_expiry = expiring_soon.to_csv(index=False)
-        st.download_button(
-            label="📥 Download Expiry Report",
-            data=csv_expiry,
-            file_name="expiry_report.csv",
-            mime="text/csv"
-        )   # <-- this closing parenthesis ends the st.download_button call correctly
+        st.download_button("📥 Download Expiry Report", data=csv_expiry, file_name="expiry_report.csv", mime="text/csv")
 
 elif menu == "Notifications":
     stock_alerts = generate_stock_alerts(data)
     expiry_alerts = generate_expiry_alerts(data)
-    
-    # Now, use st.* commands to display these alerts
+
     total_alerts = len(stock_alerts) + len(expiry_alerts)
-    
+
     if total_alerts == 0:
         st.success("✅ No alerts! All stock and expiry levels are fine.")
     else:
         st.warning(f"⚠️ You have {total_alerts} alerts:")
-        
+
         st.subheader("📦 Stock Alerts to Restock")
         for _, row in stock_alerts.iterrows():
             st.write(f"- {row['Product_Name']} (Stock Left: {row['Stock_Remaining']})")
-        
+
         st.subheader("⏰ Expiry Alerts to Remove")
         for _, row in expiry_alerts.iterrows():
             st.write(f"- {row['Product_Name']} (Expires in {row['Days_To_Expiry']} days)")
-            
-            try:
-                from barcode import Code128
-                from barcode.writer import ImageWriter
-                from PIL import Image
-                from io import BytesIO
 
-                buffer = BytesIO()
-                Code128(row['Product_Name'], writer=ImageWriter()).write(buffer)
-                buffer.seek(0)
-                st.image(Image.open(buffer), width=150)
-            except:
-                st.text("Barcode unavailable")
-
-        st.subheader("⏰ Expiry Alerts")
-        for _, row in expiry_alerts.iterrows():
-            st.markdown(f"🟨 **{row['Product_Name']}** is expiring in {row['Days_To_Expiry']} days (Expiry: {row['Expiry_Date'].date()}).")
-            
             try:
                 buffer = BytesIO()
                 Code128(row['Product_Name'], writer=ImageWriter()).write(buffer)
                 buffer.seek(0)
                 st.image(Image.open(buffer), width=150)
-            except:
+            except Exception:
                 st.text("Barcode unavailable")
 
-    conn.close()
-     
 elif menu == "Raw Data":
     st.header("📋 Raw Dataset")
     st.dataframe(data)
@@ -369,10 +292,8 @@ elif menu == "Raw Data":
 
 # -------------------- Footer --------------------
 st.markdown("---")
-st.markdown(
-    "<div style='text-align: center;'>Made with ❤️ using Streamlit | Project: MSIT405</div>",
-    unsafe_allow_html=True,
-)
+st.markdown("<div style='text-align: center;'>Made with ❤️ using Streamlit | Project: MSIT405</div>", unsafe_allow_html=True)
+
 
 
 
