@@ -7,6 +7,8 @@ from datetime import datetime
 from sklearn.linear_model import LinearRegression
 import numpy as np
 from db_utils import load_data
+from notifications import generate_stock_alerts, generate_expiry_alerts
+
 
 # -------------------- Step 1: Page Configuration and Styling --------------------
 st.set_page_config(
@@ -312,33 +314,25 @@ elif menu == "Expiry Alerts":
             mime="text/csv"
         )   # <-- this closing parenthesis ends the st.download_button call correctly
 
-elif menu.startswith("Notifications"):
-    # notification page code
+elif menu == "Notifications":
+    stock_alerts = generate_stock_alerts(data)
+    expiry_alerts = generate_expiry_alerts(data)
     
-    st.subheader("Notification Alerts")
-    st.write("This page displays barcode alerts.")
-    
-    # Connect to the database
-    conn = sqlite3.connect("retail_data.db")
-    cursor = conn.cursor()
-
-    # Generate alerts from data
-    stock_threshold = 20
-    expiry_days = 7
-
-    stock_alerts = data[data["Stock_Remaining"] < stock_threshold]
-    expiry_alerts = data[data["Days_To_Expiry"] <= expiry_days]
-
+    # Now, use st.* commands to display these alerts
     total_alerts = len(stock_alerts) + len(expiry_alerts)
-
+    
     if total_alerts == 0:
-        st.success("✅ All good! No stock or expiry alerts.")
+        st.success("✅ No alerts! All stock and expiry levels are fine.")
     else:
-        st.warning(f"⚠️ You have {total_alerts} active alerts.")
-
-        st.subheader("📦 Stock Alerts")
+        st.warning(f"⚠️ You have {total_alerts} alerts:")
+        
+        st.subheader("📦 Stock Alerts to Restock")
         for _, row in stock_alerts.iterrows():
-            st.markdown(f"🟥 **{row['Product_Name']}** is low on stock (Only {row['Stock_Remaining']} left).")
+            st.write(f"- {row['Product_Name']} (Stock Left: {row['Stock_Remaining']})")
+        
+        st.subheader("⏰ Expiry Alerts to Remove")
+        for _, row in expiry_alerts.iterrows():
+            st.write(f"- {row['Product_Name']} (Expires in {row['Days_To_Expiry']} days)")
             
             try:
                 from barcode import Code128
