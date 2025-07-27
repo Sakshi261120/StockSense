@@ -255,8 +255,9 @@ elif menu == "Expiry Alerts":
             mime="text/csv"
             
 elif menu == "Notifications":
-    st.header("🔔 Unified Notification Center")
-
+    st.subheader("Notification Alerts")
+    st.write("This page displays barcode alerts.")
+    
     # Connect to the database
     conn = sqlite3.connect("retail_data.db")
     cursor = conn.cursor()
