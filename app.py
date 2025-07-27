@@ -35,10 +35,21 @@ st.markdown(
 
 # -------------------- Step 2: Sidebar Navigation --------------------
 st.sidebar.markdown("## 📌 Navigation")
+
+menu_labels = [
+    "Dashboard",
+    "Price Optimization",
+    "Stock Alerts",
+    "Expiry Alerts",
+    f"Notifications ({total_alerts_count})" if total_alerts_count > 0 else "Notifications",
+    "Raw Data"
+]
+
 menu = st.sidebar.radio(
     "Go to",
-    ["Dashboard", "Price Optimization", "Stock Alerts", "Expiry Alerts", "Raw Data"]
+    menu_labels
 )
+
 st.sidebar.markdown("---")
 st.sidebar.markdown("Developed by: **GROUP 1**")
 
@@ -84,6 +95,21 @@ if uploaded_file is not None:
 else:
     # User has NOT uploaded file, fallback to database load_data()
     data = load_data()
+
+    # ---------------- Calculate alert counts for Notifications menu ----------------
+stock_threshold = 20  # Customize this threshold if needed
+expiry_days = 7       # Customize expiry window in days
+
+# Ensure data exists before trying to compute alerts
+    if data is not None and not data.empty:
+        stock_alerts_count = len(data[data["Stock_Remaining"] < stock_threshold])
+        expiry_alerts_count = len(data[data["Days_To_Expiry"] <= expiry_days])
+    else:
+        stock_alerts_count = 0
+        expiry_alerts_count = 0
+    
+    total_alerts_count = stock_alerts_count + expiry_alerts_count
+
     if data.empty:
         st.warning("⚠️ No data available in database.")
     else:
@@ -285,7 +311,9 @@ elif menu == "Expiry Alerts":
             mime="text/csv"
         )   # <-- this closing parenthesis ends the st.download_button call correctly
 
-elif menu == "Notifications":
+elif menu.startswith("Notifications"):
+    # notification page code
+    
     st.subheader("Notification Alerts")
     st.write("This page displays barcode alerts.")
     
