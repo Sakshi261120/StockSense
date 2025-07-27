@@ -34,17 +34,22 @@ st.markdown(
 )
 
 # -------------------- Step 2: Sidebar Navigation --------------------
+# Set default
+total_alerts_count = 0
+
+# Sidebar Navigation
 st.sidebar.markdown("## 📌 Navigation")
-
-menu_labels = [
-    "Dashboard",
-    "Price Optimization",
-    "Stock Alerts",
-    "Expiry Alerts",
-    f"Notifications ({total_alerts_count})" if total_alerts_count > 0 else "Notifications",
-    "Raw Data"
-]
-
+menu = st.sidebar.radio(
+    "Go to",
+    [
+        "Dashboard",
+        "Price Optimization",
+        "Stock Alerts",
+        "Expiry Alerts",
+        "Raw Data",
+        f"🔔 Notifications ({total_alerts_count})" if total_alerts_count > 0 else "🔔 Notifications"
+    ]
+)
 menu = st.sidebar.radio(
     "Go to",
     menu_labels
