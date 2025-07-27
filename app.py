@@ -253,7 +253,7 @@ elif menu == "Expiry Alerts":
             data=csv_expiry,
             file_name="expiry_report.csv",
             mime="text/csv"
-            
+        )
 elif menu == "Notifications":
     st.subheader("Notification Alerts")
     st.write("This page displays barcode alerts.")
