@@ -307,7 +307,7 @@ elif menu == "Notifications":
 
     conn.close()
 
-        )
+    )
 elif menu == "Raw Data":
     st.header("📋 Raw Dataset")
     st.dataframe(data)
