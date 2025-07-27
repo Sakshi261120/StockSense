@@ -34,26 +34,21 @@ st.markdown(
 )
 
 # -------------------- Step 2: Sidebar Navigation --------------------
-# Set default
+# Temporary default value (replace this with your actual alert count logic later)
 total_alerts_count = 0
 
-# Sidebar Navigation
+# Define the menu list, including notification icon with count
+menu_labels = [
+    "Dashboard",
+    "Price Optimization",
+    "Stock Alerts",
+    "Expiry Alerts",
+    "Raw Data",
+    f"🔔 Notifications ({total_alerts_count})" if total_alerts_count > 0 else "🔔 Notifications"
+]
 st.sidebar.markdown("## 📌 Navigation")
-menu = st.sidebar.radio(
-    "Go to",
-    [
-        "Dashboard",
-        "Price Optimization",
-        "Stock Alerts",
-        "Expiry Alerts",
-        "Raw Data",
-        f"🔔 Notifications ({total_alerts_count})" if total_alerts_count > 0 else "🔔 Notifications"
-    ]
-)
-menu = st.sidebar.radio(
-    "Go to",
-    menu_labels
-)
+menu = st.sidebar.radio("Go to", menu_labels)
+
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("Developed by: **GROUP 1**")
