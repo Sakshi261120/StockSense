@@ -93,6 +93,7 @@ if menu == "Dashboard":
     if data.empty:
         st.warning("⚠️ No data available to display. Please check database connection or data source.")
     else:
+        # --- Your existing dashboard metrics ---
         total_revenue = data["Revenue"].sum()
         total_items = data["Quantity_Sold"].sum()
         unique_products = data["Product_Name"].nunique()
@@ -102,6 +103,34 @@ if menu == "Dashboard":
         col2.metric("🛒 Items Sold", total_items)
         col3.metric("📦 Unique Products", unique_products)
 
+        # --- Add notification summary here ---
+        stock_threshold = 20
+        expiry_days = 7
+
+        stock_alerts = data[data["Stock_Remaining"] < stock_threshold]
+        expiry_alerts = data[data["Days_To_Expiry"] <= expiry_days]
+
+        total_alerts = len(stock_alerts) + len(expiry_alerts)
+
+        if total_alerts == 0:
+            st.success("✅ All good! No stock or expiry alerts.")
+        else:
+            # Display notification bar with counts and icons
+            st.markdown(
+                f"""<div style="
+                    background-color: #f9d6d5; 
+                    padding: 10px; 
+                    border-radius: 5px; 
+                    font-weight: bold;
+                    color: #b71c1c;">
+                    ⚠️ You have {total_alerts} important alert(s):
+                    🟥 {len(stock_alerts)} low stock items,
+                    🟨 {len(expiry_alerts)} expiring soon items.
+                </div>""",
+                unsafe_allow_html=True
+            )
+
+        # --- Continue with your top products bar chart ---
         top_products = data.groupby("Product_Name")["Revenue"].sum().sort_values(ascending=False).head(10)
         fig = px.bar(
             top_products,
@@ -113,6 +142,7 @@ if menu == "Dashboard":
         )
         fig.update_layout(xaxis_tickangle=-45)
         st.plotly_chart(fig, use_container_width=True)
+
 
 elif menu == "Price Optimization":
     st.subheader("🔧 Train Model & 📊 Predict Prices (End-to-End ML)")
