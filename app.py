@@ -258,31 +258,36 @@ elif menu == "Expiry Alerts":
         st.download_button("📥 Download Expiry Report", data=csv_expiry, file_name="expiry_report.csv", mime="text/csv")
 
 elif menu == "Notifications":
-    stock_alerts = generate_stock_alerts(data)
-    expiry_alerts = generate_expiry_alerts(data)
+    st.subheader("🔔 Notifications")
 
-    total_alerts = len(stock_alerts) + len(expiry_alerts)
-
-    if total_alerts == 0:
-        st.success("✅ No alerts! All stock and expiry levels are fine.")
+    # Load data: CSV if uploaded, else fallback to DB
+    if uploaded_file is not None:
+        df = pd.read_csv(uploaded_file, parse_dates=["Expiry_Date"])
+        st.success("Loaded data from uploaded CSV.")
     else:
-        st.warning(f"⚠️ You have {total_alerts} alerts:")
+        df = load_data()  # assumes load_data loads from DB
+        st.info("Loaded data from database.")
 
-        st.subheader("📦 Stock Alerts to Restock")
-        for _, row in stock_alerts.iterrows():
-            st.write(f"- {row['Product_Name']} (Stock Left: {row['Stock_Remaining']})")
+    # Check if data is valid
+    if df.empty or 'Quantity_Sold' not in df.columns or 'Expiry_Date' not in df.columns:
+        st.warning("Data is missing required columns.")
+    else:
+        # Notification logic
+        today = pd.to_datetime("today")
+        upcoming_expiry = df[df['Expiry_Date'] <= today + pd.Timedelta(days=7)]
+        low_stock = df[df['Quantity_Sold'] < 10]
 
-        st.subheader("⏰ Expiry Alerts to Remove")
-        for _, row in expiry_alerts.iterrows():
-            st.write(f"- {row['Product_Name']} (Expires in {row['Days_To_Expiry']} days)")
+        if upcoming_expiry.empty and low_stock.empty:
+            st.success("✅ No new notifications. Inventory is healthy.")
+        else:
+            if not low_stock.empty:
+                st.warning("📉 Low Stock Items:")
+                st.dataframe(low_stock[['Product', 'Quantity_Sold']])
 
-            try:
-                buffer = BytesIO()
-                Code128(row['Product_Name'], writer=ImageWriter()).write(buffer)
-                buffer.seek(0)
-                st.image(Image.open(buffer), width=150)
-            except Exception:
-                st.text("Barcode unavailable")
+            if not upcoming_expiry.empty:
+                st.warning("⌛ Items Near Expiry (within 7 days):")
+                st.dataframe(upcoming_expiry[['Product', 'Expiry_Date']])
+
 
 elif menu == "Raw Data":
     st.header("📋 Raw Dataset")
