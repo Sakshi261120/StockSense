@@ -42,7 +42,8 @@ st.title("Welcome to StockSense")
 st.write("Current working directory:", os.getcwd())
 
 # -------------------- Step 2: Load Data (Upload or DB) and Prepare Alerts --------------------
-
+stock_threshold = 20
+expiry_days = 7
 uploaded_file = st.file_uploader("Upload your sales data CSV file", type=["csv"])
 
 if uploaded_file is not None:
