@@ -254,10 +254,6 @@ elif menu == "Notifications":
         stock_alerts = generate_stock_alerts(data, threshold=stock_threshold)
         expiry_alerts = generate_expiry_alerts(data, days_threshold=expiry_days)
 
-        # 🔍 Debug output to verify alerts are generated
-        st.write("🧪 DEBUG: Stock Alerts", stock_alerts)
-        st.write("🧪 DEBUG: Expiry Alerts", expiry_alerts)
-
         total_alerts = len(stock_alerts) + len(expiry_alerts)
 
         if total_alerts == 0:
@@ -265,20 +261,27 @@ elif menu == "Notifications":
         else:
             st.info(f"📋 You have {total_alerts} active alert(s)")
 
-            # Show stock alerts
+            # STOCK ALERTS
             if stock_alerts:
                 st.markdown("### 📦 Stock Alerts")
                 for alert in stock_alerts:
-                    st.error(f"🔻 {alert['message']}")  # show the message
-                    st.toast(f"🔔 Stock Alert: {alert['message']}")
+                    if isinstance(alert, dict):
+                        msg = alert.get("message", str(alert))
+                    else:
+                        msg = str(alert)
+                    st.error(f"🔻 {msg}")
+                    st.toast(f"🔔 Stock Alert: {msg}")
 
-            # Show expiry alerts
+            # EXPIRY ALERTS
             if expiry_alerts:
                 st.markdown("### ⏰ Expiry Alerts")
                 for alert in expiry_alerts:
-                    st.warning(f"⚠️ {alert['message']}")
-                    st.toast(f"⏰ Expiry Alert: {alert['message']}")
-
+                    if isinstance(alert, dict):
+                        msg = alert.get("message", str(alert))
+                    else:
+                        msg = str(alert)
+                    st.warning(f"⚠️ {msg}")
+                    st.toast(f"⏰ Expiry Alert: {msg}")
     else:
         st.warning("⚠️ Please upload or load data to view alerts.")
 
