@@ -25,7 +25,7 @@ def generate_expiry_alerts(df, days_threshold=7):
                 alerts.append(f"{row['Product_Name']} expires in {days_to_expiry} day(s) on {expiry_date}.")
     return alerts
 
-def get_all_alerts(df, stock_threshold=5, expiry_days=7)
+def get_all_alerts(df, stock_threshold=5, expiry_days=7):
     return generate_stock_alerts(df, stock_threshold) + generate_expiry_alerts(df, expiry_days)
 
 
