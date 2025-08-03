@@ -1,7 +1,7 @@
 import requests
 
-user_key = "YOUR_PUSHOVER_USER_KEY"
-api_token = "YOUR_PUSHOVER_API_TOKEN"
+user_key = ""
+api_token = ""
 message = "Hello from Pushover test!"
 
 response = requests.post(
