@@ -609,16 +609,6 @@ st.markdown("<div style='text-align: center;'>Made with ❤️ using Streamlit |
 
 
 
-elif menu == "Raw Data":
-    st.header("📋 Raw Dataset")
-    st.dataframe(data)
-    csv = data.to_csv(index=False)
-    st.download_button("Download CSV", csv, "easyday_sales_dataset.csv")
-
-# -------------------- Footer --------------------
-st.markdown("---")
-st.markdown("<div style='text-align: center;'>Made with ❤️ using Streamlit | Project: MSIT405</div>", unsafe_allow_html=True)
-
 
 
 
