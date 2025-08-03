@@ -4,6 +4,28 @@ import pandas as pd
 import sqlite3
 import plotly.express as px
 from datetime import datetime
+def generate_stock_alerts(df, threshold=5):
+    alerts = []
+    for _, row in df.iterrows():
+        if row.get("quantity", 0) < threshold:
+            alerts.append(f"{row['product_name']} is low in stock ({row['quantity']} units left). Please refill.")
+    return alerts
+
+def generate_expiry_alerts(df, days_threshold=7):
+    alerts = []
+    today = datetime.today()
+    for _, row in df.iterrows():
+        expiry_str = row.get("expiry_date")
+        if not expiry_str:
+            continue
+        try:
+            expiry = pd.to_datetime(expiry_str)
+        except:
+            continue
+        days_left = (expiry - today).days
+        if 0 <= days_left <= days_threshold:
+            alerts.append(f"{row['product_name']} is expiring in {days_left} day(s).")
+    return alerts
 from sklearn.linear_model import LinearRegression
 import numpy as np
 import joblib
