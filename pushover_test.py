@@ -1,6 +1,6 @@
 import requests
 
-user_key = ""
+user_key = "umqpi3kryezvwo9mjpqju5qc5j59kx"
 api_token = ""
 message = "Hello from Pushover test!"
 
