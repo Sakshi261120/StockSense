@@ -107,6 +107,10 @@ else:
     else:
         st.warning("⚠️ No data available from database.")
         data = pd.DataFrame(columns=["Product_Name", "Revenue", "Quantity_Sold", "Stock_Remaining", "Expiry_Date", "Days_To_Expiry"])
+# Alert Settings sliders - place immediately after data is loaded
+stock_threshold = st.sidebar.slider("Stock Alert Threshold", 1, 100, 20)
+expiry_days = st.sidebar.slider("Expiry Alert Days", 1, 30, 7)
+
 
 # Use same logic as notifications page
 stock_alerts = generate_stock_alerts(data, threshold=stock_threshold)
@@ -126,12 +130,10 @@ menu_labels = [
 
 st.sidebar.markdown("## 📌 Navigation")
 menu = st.sidebar.radio("Go to", menu_labels)
-st.sidebar.markdown("## ⚙️ Alert Settings")
-stock_threshold = st.sidebar.slider("Stock Alert Threshold", 1, 100, 20)
-expiry_days = st.sidebar.slider("Expiry Alert Days", 1, 30, 7)
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("Developed by: **GROUP 1**")
+
 
 # -------------------- Step 4: Main App Logic --------------------
 
@@ -269,9 +271,6 @@ elif menu == "Expiry Alerts":
 elif menu == "Notifications":
     st.subheader("🔔 Notifications Center")
 
-    stock_threshold = st.session_state.get("stock_threshold", 5)
-    expiry_days = st.session_state.get("expiry_days", 7)
-
     if data is not None and not data.empty:
         stock_alerts = generate_stock_alerts(data, threshold=stock_threshold)
         expiry_alerts = generate_expiry_alerts(data, days_threshold=expiry_days)
@@ -281,31 +280,18 @@ elif menu == "Notifications":
         if total_alerts == 0:
             st.success("✅ No active alerts. All inventory looks good.")
         else:
-            st.info(f"📋 You have {total_alerts} active alert(s)")
-
-            # STOCK ALERTS
             if stock_alerts:
                 st.markdown("### 📦 Stock Alerts")
                 for alert in stock_alerts:
-                    if isinstance(alert, dict):
-                        msg = alert.get("message", str(alert))
-                    else:
-                        msg = str(alert)
-                    st.error(f"🔻 {msg}")
-                    st.toast(f"🔔 Stock Alert: {msg}")
+                    st.error(f"🔻 {alert}")
 
-            # EXPIRY ALERTS
             if expiry_alerts:
                 st.markdown("### ⏰ Expiry Alerts")
                 for alert in expiry_alerts:
-                    if isinstance(alert, dict):
-                        msg = alert.get("message", str(alert))
-                    else:
-                        msg = str(alert)
-                    st.warning(f"⚠️ {msg}")
-                    st.toast(f"⏰ Expiry Alert: {msg}")
+                    st.warning(f"⚠️ {alert}")
     else:
         st.warning("⚠️ Please upload or load data to view alerts.")
+
 
 
 
