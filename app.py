@@ -21,25 +21,26 @@ def send_pushover_notification(user_key, api_token, message):
 def generate_stock_alerts(df, threshold=5):
     alerts = []
     for _, row in df.iterrows():
-        if row.get("quantity", 0) < threshold:
-            alerts.append(f"{row['product_name']} is low in stock ({row['quantity']} units left). Please refill.")
+        if row.get("Stock_Remaining", 0) < threshold:
+            alerts.append(f"{row['Product_Name']} is low in stock ({row['Stock_Remaining']} units left). Please refill.")
     return alerts
 
 def generate_expiry_alerts(df, days_threshold=7):
     alerts = []
     today = datetime.today()
     for _, row in df.iterrows():
-        expiry_str = row.get("expiry_date")
-        if not expiry_str:
+        expiry_str = row.get("Expiry_Date")
+        if pd.isna(expiry_str):  # skip missing expiry dates
             continue
         try:
             expiry = pd.to_datetime(expiry_str)
-        except:
+        except Exception:
             continue
         days_left = (expiry - today).days
         if 0 <= days_left <= days_threshold:
-            alerts.append(f"{row['product_name']} is expiring in {days_left} day(s).")
+            alerts.append(f"{row['Product_Name']} is expiring in {days_left} day(s).")
     return alerts
+
 from sklearn.linear_model import LinearRegression
 import numpy as np
 import joblib
