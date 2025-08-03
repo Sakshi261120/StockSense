@@ -125,8 +125,8 @@ else:
         # success = send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, "Test notification from StockSense")
         # st.write("Pushover test notification status:", success)
 # Alert Settings sliders - place immediately after data is loaded
-stock_threshold = st.sidebar.slider("Stock Alert Threshold", 1, 100, 20)
-expiry_days = st.sidebar.slider("Expiry Alert Days", 1, 30, 7)
+        stock_threshold = st.sidebar.slider("Stock Alert Threshold", 1, 100, 20)
+        expiry_days = st.sidebar.slider("Expiry Alert Days", 1, 30, 7)
 
 
 # Use same logic as notifications page
