@@ -289,22 +289,25 @@ elif menu == "Notifications":
     st.subheader("🔔 Notifications Center")
 
     if data is not None and not data.empty:
+        # Generate alerts based on thresholds
         stock_alerts = generate_stock_alerts(data, threshold=stock_threshold)
         expiry_alerts = generate_expiry_alerts(data, days_threshold=expiry_days)
 
-        st.write("DEBUG - Stock Alerts:", stock_alerts)
-        st.write("DEBUG - Expiry Alerts:", expiry_alerts)
+        # Show alerts on the Streamlit page (optional for debugging)
+        st.write("Stock Alerts:", stock_alerts)
+        st.write("Expiry Alerts:", expiry_alerts)
 
-        # Send Pushover notifications here, indented inside this block
+        # Pushover credentials
         PUSHOVER_USER_KEY = "umqpi3kryezvwo9mjpqju5qc5j59kx"
         PUSHOVER_API_TOKEN = "aue6x29a79caihi7pt4g27yoef4vv3"
 
+        # Send Pushover notifications for each stock alert
         for alert in stock_alerts:
-            send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, alert)
+            send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, f"Stock Alert: {alert}")
 
+        # Send Pushover notifications for each expiry alert
         for alert in expiry_alerts:
-            send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, alert)
-
+            send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, f"Expiry Alert: {alert}")
 
         total_alerts = len(stock_alerts) + len(expiry_alerts)
 
