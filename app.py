@@ -283,13 +283,13 @@ elif menu == "Notifications":
     st.subheader("🔔 Notifications Center")
 
     if data is not None and not data.empty:
-    stock_alerts = generate_stock_alerts(data, threshold=stock_threshold)
-    expiry_alerts = generate_expiry_alerts(data, days_threshold=expiry_days)
+        stock_alerts = generate_stock_alerts(data, threshold=stock_threshold)
+        expiry_alerts = generate_expiry_alerts(data, days_threshold=expiry_days)
 
-    st.write("DEBUG - Stock Alerts:", stock_alerts)
-    st.write("DEBUG - Expiry Alerts:", expiry_alerts)
+        st.write("DEBUG - Stock Alerts:", stock_alerts)
+        st.write("DEBUG - Expiry Alerts:", expiry_alerts)
 
-        # 🔔 Send Pushover alerts for each stock and expiry issue
+        # Send Pushover notifications here, indented inside this block
         PUSHOVER_USER_KEY = "umqpi3kryezvwo9mjpqju5qc5j59kx"
         PUSHOVER_API_TOKEN = "aue6x29a79caihi7pt4g27yoef4vv3"
 
@@ -313,8 +313,10 @@ elif menu == "Notifications":
                 st.markdown("### ⏰ Expiry Alerts")
                 for alert in expiry_alerts:
                     st.warning(f"⚠️ {alert}")
+
     else:
         st.warning("⚠️ Please upload or load data to view alerts.")
+
 
 
 
