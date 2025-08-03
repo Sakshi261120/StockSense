@@ -4,6 +4,7 @@ from datetime import datetime
 def generate_stock_alerts(df, threshold=5):
     alerts = []
     for _, row in df.iterrows():
+        # Use correct column names matching your data
         if row['Stock_Remaining'] < threshold:
             alerts.append(f"Only {row['Stock_Remaining']} units left of {row['Product_Name']}.")
     return alerts
