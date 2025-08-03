@@ -290,43 +290,42 @@ elif menu == "Notifications":
     st.subheader("🔔 Notifications Center")
 
     if data is not None and not data.empty:
-        # Generate alerts based on thresholds
-        stock_alerts = generate_stock_alerts(data, threshold=stock_threshold)
-        expiry_alerts = generate_expiry_alerts(data, days_threshold=expiry_days)
-
-        # Show alerts on the Streamlit page (optional for debugging)
-        st.write("Stock Alerts:", stock_alerts)
-        st.write("Expiry Alerts:", expiry_alerts)
-
-        # Pushover credentials
-        PUSHOVER_USER_KEY = "umqpi3kryezvwo9mjpqju5qc5j59kx"
-        PUSHOVER_API_TOKEN = "aue6x29a79caihi7pt4g27yoef4vv3"
-
-        # Send Pushover notifications for each stock alert
-        for alert in stock_alerts:
-            send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, f"Stock Alert: {alert}")
-
-        # Send Pushover notifications for each expiry alert
-        for alert in expiry_alerts:
-            send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, f"Expiry Alert: {alert}")
-
-        total_alerts = len(stock_alerts) + len(expiry_alerts)
-
-        if total_alerts == 0:
-            st.success("✅ No active alerts. All inventory looks good.")
+        if not all(col in data.columns for col in ["Product_Name", "Stock_Remaining", "Expiry_Date"]):
+            st.error("Data is missing required columns for alerts.")
         else:
-            if stock_alerts:
-                st.markdown("### 📦 Stock Alerts")
-                for alert in stock_alerts:
-                    st.error(f"🔻 {alert}")
+            # Generate alerts
+            stock_alerts = generate_stock_alerts(data, threshold=stock_threshold)
+            expiry_alerts = generate_expiry_alerts(data, days_threshold=expiry_days)
 
-            if expiry_alerts:
-                st.markdown("### ⏰ Expiry Alerts")
-                for alert in expiry_alerts:
-                    st.warning(f"⚠️ {alert}")
+            st.write("Stock Alerts:", stock_alerts)
+            st.write("Expiry Alerts:", expiry_alerts)
+
+            for alert in stock_alerts:
+                st.write("Sending stock alert:", alert)
+                send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, f"Stock Alert: {alert}")
+
+            for alert in expiry_alerts:
+                st.write("Sending expiry alert:", alert)
+                send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, f"Expiry Alert: {alert}")
+
+            total_alerts = len(stock_alerts) + len(expiry_alerts)
+
+            if total_alerts == 0:
+                st.success("✅ No active alerts. All inventory looks good.")
+            else:
+                if stock_alerts:
+                    st.markdown("### 📦 Stock Alerts")
+                    for alert in stock_alerts:
+                        st.error(f"🔻 {alert}")
+
+                if expiry_alerts:
+                    st.markdown("### ⏰ Expiry Alerts")
+                    for alert in expiry_alerts:
+                        st.warning(f"⚠️ {alert}")
 
     else:
         st.warning("⚠️ Please upload or load data to view alerts.")
+
 
 elif menu == "Raw Data":
     st.header("📋 Raw Dataset")
