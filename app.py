@@ -279,7 +279,7 @@ elif menu == "Expiry Alerts":
         csv_expiry = expiring_soon.to_csv(index=False)
         st.download_button("📥 Download Expiry Report", data=csv_expiry, file_name="expiry_report.csv", mime="text/csv")
 
-eelif menu == "Notifications":
+elif menu == "Notifications":
     st.subheader("🔔 Notifications Center")
 
     if data is not None and not data.empty:
