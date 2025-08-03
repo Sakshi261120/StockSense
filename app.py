@@ -247,9 +247,16 @@ elif menu == "Expiry Alerts":
 elif menu == "Notifications":
     st.subheader("🔔 Notifications Center")
 
+    stock_threshold = st.session_state.get("stock_threshold", 5)
+    expiry_days = st.session_state.get("expiry_days", 7)
+
     if data is not None and not data.empty:
         stock_alerts = generate_stock_alerts(data, threshold=stock_threshold)
         expiry_alerts = generate_expiry_alerts(data, days_threshold=expiry_days)
+
+        # 🔍 Debug output to verify alerts are generated
+        st.write("🧪 DEBUG: Stock Alerts", stock_alerts)
+        st.write("🧪 DEBUG: Expiry Alerts", expiry_alerts)
 
         total_alerts = len(stock_alerts) + len(expiry_alerts)
 
@@ -262,18 +269,19 @@ elif menu == "Notifications":
             if stock_alerts:
                 st.markdown("### 📦 Stock Alerts")
                 for alert in stock_alerts:
-                    st.error(f"🔻 {alert}")         # red alert box
-                    st.toast(f"🔔 Stock Alert: {alert}")  # toast popup
+                    st.error(f"🔻 {alert['message']}")  # show the message
+                    st.toast(f"🔔 Stock Alert: {alert['message']}")
 
             # Show expiry alerts
             if expiry_alerts:
                 st.markdown("### ⏰ Expiry Alerts")
                 for alert in expiry_alerts:
-                    st.warning(f"⚠️ {alert}")      # yellow alert box
-                    st.toast(f"⏰ Expiry Alert: {alert}")  # toast popup
+                    st.warning(f"⚠️ {alert['message']}")
+                    st.toast(f"⏰ Expiry Alert: {alert['message']}")
 
     else:
         st.warning("⚠️ Please upload or load data to view alerts.")
+
 
 
 elif menu == "Raw Data":
