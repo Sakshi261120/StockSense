@@ -124,22 +124,6 @@ if menu == "Dashboard":
         col2.metric("🛒 Items Sold", total_items)
         col3.metric("📦 Unique Products", unique_products)
 
-        # Show alert summary bar on dashboard
-        if total_alerts_count == 0:
-            st.success("✅ All good! No stock or expiry alerts.")
-        else:
-            st.markdown(f"""
-            <div style="
-                background-color: #f9d6d5; 
-                padding: 10px; 
-                border-radius: 5px; 
-                font-weight: bold;
-                color: #b71c1c;">
-                ⚠️ You have {total_alerts_count} important alert(s):
-                🟥 {stock_alerts_count} low stock items,
-                🟨 {expiry_alerts_count} expiring soon items.
-            </div>""", unsafe_allow_html=True)
-
         # Top 10 products bar chart
         top_products = data.groupby("Product_Name")["Revenue"].sum().sort_values(ascending=False).head(10)
         fig = px.bar(
@@ -152,6 +136,7 @@ if menu == "Dashboard":
         )
         fig.update_layout(xaxis_tickangle=-45)
         st.plotly_chart(fig, use_container_width=True)
+
 
 elif menu == "Price Optimization":
     st.subheader("🔧 Train Model & 📊 Predict Prices (End-to-End ML)")
