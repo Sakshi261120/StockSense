@@ -251,6 +251,7 @@ elif menu == "Notifications":
 
         total_alerts = len(stock_alerts) + len(expiry_alerts)
 
+        # Optional debug outputs
         st.write(f"Stock alerts found: {len(stock_alerts)}")
         st.write(f"Expiry alerts found: {len(expiry_alerts)}")
 
@@ -270,7 +271,6 @@ elif menu == "Notifications":
                     st.warning(f"⚠️ {alert}")
     else:
         st.warning("⚠️ Please upload or load data to view alerts.")
-
 
 
 elif menu == "Raw Data":
