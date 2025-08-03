@@ -243,31 +243,30 @@ elif menu == "Expiry Alerts":
         st.download_button("📥 Download Expiry Report", data=csv_expiry, file_name="expiry_report.csv", mime="text/csv")
 
 elif menu == "Notifications":
-    st.subheader("🔔 Notifications")
+    st.subheader("🔔 Notifications Center")
 
-    if df is not None:
-        from notification import get_all_alerts
-        alerts = get_all_alerts(df)
+    if df is not None and not df.empty:
+        stock_alerts = generate_stock_alerts(df)
+        expiry_alerts = generate_expiry_alerts(df)
 
-        if alerts:
-            for alert in alerts:
-                if alert["type"] == "Stock Alert":
-                    with st.container():
-                        st.error(f"📦 Stock Alert: **{alert['product']}**")
-                        st.write(alert["message"])
-                        st.write(f"Quantity remaining: `{alert['quantity']}`")
-                        st.markdown("---")
+        total_alerts = len(stock_alerts) + len(expiry_alerts)
 
-                elif alert["type"] == "Expiry Alert":
-                    with st.container():
-                        st.warning(f"🗓️ Expiry Alert: **{alert['product']}**")
-                        st.write(alert["message"])
-                        st.write(f"Expired on: `{alert['expiry_date']}`")
-                        st.markdown("---")
+        if total_alerts == 0:
+            st.success("✅ No active alerts. All inventory looks good.")
         else:
-            st.success("✅ No notifications at the moment.")
+            st.info(f"📋 You have {total_alerts} active alert(s)")
+
+            if stock_alerts:
+                st.markdown("### 📦 Stock Alerts")
+                for alert in stock_alerts:
+                    st.error(f"🔻 {alert}")
+
+            if expiry_alerts:
+                st.markdown("### ⏰ Expiry Alerts")
+                for alert in expiry_alerts:
+                    st.warning(f"⚠️ {alert}")
     else:
-        st.info("Please upload or load inventory data first.")
+        st.warning("⚠️ Please upload or load data to view alerts.")
 
 
 elif menu == "Raw Data":
