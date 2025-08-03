@@ -88,10 +88,10 @@ else:
         st.warning("⚠️ No data available from database.")
         data = pd.DataFrame(columns=["Product_Name", "Revenue", "Quantity_Sold", "Stock_Remaining", "Expiry_Date", "Days_To_Expiry"])
 
-# Calculate alert counts for sidebar notification
-stock_alerts_count = len(data[data["Stock_Remaining"] < stock_threshold])
-expiry_alerts_count = len(data[data["Days_To_Expiry"] <= expiry_days])
-total_alerts_count = stock_alerts_count + expiry_alerts_count
+# Use same logic as notifications page
+stock_alerts = generate_stock_alerts(data, threshold=stock_threshold)
+expiry_alerts = generate_expiry_alerts(data, days_threshold=expiry_days)
+total_alerts_count = len(stock_alerts) + len(expiry_alerts)
 
 # -------------------- Step 3: Sidebar Navigation --------------------
 
