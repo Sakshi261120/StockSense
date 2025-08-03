@@ -253,24 +253,25 @@ elif menu == "Notifications":
 
         total_alerts = len(stock_alerts) + len(expiry_alerts)
 
-        # Optional debug outputs
-        st.write(f"Stock alerts found: {len(stock_alerts)}")
-        st.write(f"Expiry alerts found: {len(expiry_alerts)}")
-
         if total_alerts == 0:
             st.success("✅ No active alerts. All inventory looks good.")
         else:
             st.info(f"📋 You have {total_alerts} active alert(s)")
 
+            # Show stock alerts
             if stock_alerts:
                 st.markdown("### 📦 Stock Alerts")
                 for alert in stock_alerts:
-                    st.error(f"🔻 {alert}")
+                    st.error(f"🔻 {alert}")         # red alert box
+                    st.toast(f"🔔 Stock Alert: {alert}")  # toast popup
 
+            # Show expiry alerts
             if expiry_alerts:
                 st.markdown("### ⏰ Expiry Alerts")
                 for alert in expiry_alerts:
-                    st.warning(f"⚠️ {alert}")
+                    st.warning(f"⚠️ {alert}")      # yellow alert box
+                    st.toast(f"⏰ Expiry Alert: {alert}")  # toast popup
+
     else:
         st.warning("⚠️ Please upload or load data to view alerts.")
 
