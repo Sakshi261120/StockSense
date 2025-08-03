@@ -260,33 +260,39 @@ elif menu == "Expiry Alerts":
 elif menu == "Notifications":
     st.subheader("🔔 Notifications")
 
-    # Load data: CSV if uploaded, else fallback to DB
+    # Load from uploaded file or fallback
     if uploaded_file is not None:
         df = pd.read_csv(uploaded_file, parse_dates=["Expiry_Date"])
         st.success("Loaded data from uploaded CSV.")
     else:
-        df = load_data()  # assumes load_data loads from DB
+        df = load_data()
         st.info("Loaded data from database.")
 
-    # Check if data is valid
-    if df.empty or 'Quantity_Sold' not in df.columns or 'Expiry_Date' not in df.columns:
-        st.warning("Data is missing required columns.")
+    if df.empty:
+        st.warning("⚠️ No data available for notifications.")
     else:
-        # Notification logic
         today = pd.to_datetime("today")
-        upcoming_expiry = df[df['Expiry_Date'] <= today + pd.Timedelta(days=7)]
-        low_stock = df[df['Quantity_Sold'] < 10]
+        df['Expiry_Date'] = pd.to_datetime(df['Expiry_Date'], errors='coerce')
+        df['Days_To_Expiry'] = (df['Expiry_Date'] - today).dt.days
 
-        if upcoming_expiry.empty and low_stock.empty:
+        low_stock = df[df['Stock_Remaining'] < stock_threshold]
+        expiring_soon = df[df['Days_To_Expiry'] <= expiry_days]
+
+        total_alerts = len(low_stock) + len(expiring_soon)
+
+        if total_alerts == 0:
             st.success("✅ No new notifications. Inventory is healthy.")
         else:
-            if not low_stock.empty:
-                st.warning("📉 Low Stock Items:")
-                st.dataframe(low_stock[['Product', 'Quantity_Sold']])
+            st.warning(f"⚠️ You have {total_alerts} alert(s): 🟥 {len(low_stock)} low stock, 🟨 {len(expiring_soon)} expiring soon")
 
-            if not upcoming_expiry.empty:
-                st.warning("⌛ Items Near Expiry (within 7 days):")
-                st.dataframe(upcoming_expiry[['Product', 'Expiry_Date']])
+            if not low_stock.empty:
+                st.subheader("🟥 Low Stock Items")
+                st.dataframe(low_stock[["Product_Name", "Stock_Remaining", "Quantity_Sold"]])
+
+            if not expiring_soon.empty:
+                st.subheader("🟨 Items Near Expiry (within 7 days)")
+                st.dataframe(expiring_soon[["Product_Name", "Expiry_Date", "Days_To_Expiry"]])
+
 
 
 elif menu == "Raw Data":
