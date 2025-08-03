@@ -245,9 +245,9 @@ elif menu == "Expiry Alerts":
 elif menu == "Notifications":
     st.subheader("🔔 Notifications Center")
 
-    if df is not None and not df.empty:
-        stock_alerts = generate_stock_alerts(df)
-        expiry_alerts = generate_expiry_alerts(df)
+    if data is not None and not data.empty:
+        stock_alerts = generate_stock_alerts(data, threshold=stock_threshold)
+        expiry_alerts = generate_expiry_alerts(data, days_threshold=expiry_days)
 
         total_alerts = len(stock_alerts) + len(expiry_alerts)
 
