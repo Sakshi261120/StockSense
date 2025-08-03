@@ -4,6 +4,17 @@ import pandas as pd
 import sqlite3
 import plotly.express as px
 from datetime import datetime
+import requests
+# 🔔 Pushover notification function
+def send_pushover_notification(user_key, api_token, message):
+    url = "https://api.pushover.net/1/messages.json"
+    data = {
+        "token": api_token,
+        "user": user_key,
+        "message": message,
+    }
+    response = requests.post(url, data=data)
+    return response.status_code == 200
 def generate_stock_alerts(df, threshold=5):
     alerts = []
     for _, row in df.iterrows():
