@@ -43,9 +43,6 @@ st.write("Current working directory:", os.getcwd())
 
 # -------------------- Step 2: Load Data (Upload or DB) and Prepare Alerts --------------------
 
-stock_threshold = 20
-expiry_days = 7
-
 uploaded_file = st.file_uploader("Upload your sales data CSV file", type=["csv"])
 
 if uploaded_file is not None:
@@ -106,6 +103,10 @@ menu_labels = [
 
 st.sidebar.markdown("## 📌 Navigation")
 menu = st.sidebar.radio("Go to", menu_labels)
+st.sidebar.markdown("## ⚙️ Alert Settings")
+stock_threshold = st.sidebar.slider("Stock Alert Threshold", 1, 100, 20)
+expiry_days = st.sidebar.slider("Expiry Alert Days", 1, 30, 7)
+
 st.sidebar.markdown("---")
 st.sidebar.markdown("Developed by: **GROUP 1**")
 
