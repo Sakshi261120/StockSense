@@ -300,10 +300,11 @@ elif menu == "Notifications":
         PUSHOVER_API_TOKEN = "aue6x29a79caihi7pt4g27yoef4vv3"
 
         for alert in stock_alerts:
-            send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, f"Stock Alert: {alert}")
+            send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, alert)
 
         for alert in expiry_alerts:
-            send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, f"Expiry Alert: {alert}")
+            send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, alert)
+
 
         total_alerts = len(stock_alerts) + len(expiry_alerts)
 
