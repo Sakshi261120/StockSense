@@ -122,8 +122,8 @@ else:
         st.warning("⚠️ No data available from database.")
         data = pd.DataFrame(columns=["Product_Name", "Revenue", "Quantity_Sold", "Stock_Remaining", "Expiry_Date", "Days_To_Expiry"])
     if data is not None and not data.empty:
-        success = send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, "Test notification from StockSense")
-        st.write("Pushover test notification status:", success)
+        # success = send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, "Test notification from StockSense")
+        # st.write("Pushover test notification status:", success)
 # Alert Settings sliders - place immediately after data is loaded
 stock_threshold = st.sidebar.slider("Stock Alert Threshold", 1, 100, 20)
 expiry_days = st.sidebar.slider("Expiry Alert Days", 1, 30, 7)
