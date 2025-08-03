@@ -12,7 +12,10 @@ def generate_expiry_alerts(df, days_threshold=7):
     alerts = []
     today = datetime.today().date()
     for _, row in df.iterrows():
-        expiry_date = pd.to_datetime(row['Expiry_Date']).date()
+        expiry_date = pd.to_datetime(row['Expiry_Date'], errors='coerce')
+        if pd.isna(expiry_date):
+            continue
+        expiry_date = expiry_date.date()
         days_to_expiry = (expiry_date - today).days
         if days_to_expiry <= days_threshold:
             if days_to_expiry < 0:
