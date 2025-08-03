@@ -5,6 +5,9 @@ import sqlite3
 import plotly.express as px
 from datetime import datetime
 import requests
+
+PUSHOVER_USER_KEY = "umqpi3kryezvwo9mjpqju5qc5j59kx"
+PUSHOVER_API_TOKEN = "aue6x29a79caihi7pt4g27yoef4vv3"
 # 🔔 Pushover notification function
 def send_pushover_notification(user_key, api_token, message):
     url = "https://api.pushover.net/1/messages.json"
