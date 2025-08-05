@@ -10,9 +10,9 @@ from sklearn.linear_model import LinearRegression
 from email.message import EmailMessage
 import smtplib
 
-from notifications import get_all_alerts  # Make sure notifications.py is in the same folder or installed properly
+from notifications import generate_stock_alerts, generate_expiry_alerts
 
-# Pushover credentials (use environment variables in production)
+# Pushover credentials - replace with your keys or use environment variables for security
 PUSHOVER_USER_KEY = os.getenv("PUSHOVER_USER_KEY", "your_user_key_here")
 PUSHOVER_API_TOKEN = os.getenv("PUSHOVER_API_TOKEN", "your_api_token_here")
 
@@ -32,7 +32,7 @@ def load_data():
     Adjust this function according to your database type and schema.
     """
     try:
-        conn = sqlite3.connect('your_database_file.db')  # Change to your DB path
+        conn = sqlite3.connect('your_database_file.db')  # Change to your DB file path
         query = """
         SELECT Product_Name, Revenue, Quantity_Sold, Stock_Remaining, Expiry_Date
         FROM sales_table;
@@ -44,7 +44,7 @@ def load_data():
         st.error(f"❌ Error loading data from database: {e}")
         return None
 
-# ----- Streamlit page setup -----
+# Page setup
 st.set_page_config(
     page_title="StockSense - Retail Optimizer",
     layout="wide",
@@ -69,7 +69,8 @@ st.markdown("""
 st.title("Welcome to StockSense")
 st.write("Current working directory:", os.getcwd())
 
-# ----- Load data -----
+# --- Data loading ---
+
 uploaded_file = st.file_uploader("Upload your sales data CSV file", type=["csv"])
 
 if uploaded_file is not None:
@@ -96,8 +97,9 @@ if uploaded_file is not None:
     except Exception as e:
         st.error(f"❌ Error reading file: {e}")
         st.stop()
+
 else:
-    # Fallback: load from database
+    # Fallback: load data from database
     data = load_data()
     if data is not None and not data.empty:
         data['Expiry_Date'] = pd.to_datetime(data['Expiry_Date'], errors='coerce')
@@ -109,20 +111,16 @@ else:
         st.warning("⚠️ No data available from database.")
         data = pd.DataFrame(columns=["Product_Name", "Revenue", "Quantity_Sold", "Stock_Remaining", "Expiry_Date", "Days_To_Expiry"])
 
-# ----- Alert thresholds sliders (always visible) -----
+# --- Alert thresholds ---
 stock_threshold = st.sidebar.slider("Stock Alert Threshold", 1, 100, 20)
 expiry_days = st.sidebar.slider("Expiry Alert Days", 1, 30, 7)
 
-# ----- Generate alerts -----
-try:
-    stock_alerts, expiry_alerts = get_all_alerts(data, stock_threshold, expiry_days)
-except ValueError as e:
-    st.error(str(e))
-    stock_alerts, expiry_alerts = [], []
-
+# --- Generate alerts ---
+stock_alerts = generate_stock_alerts(data, stock_threshold)
+expiry_alerts = generate_expiry_alerts(data, expiry_days)
 total_alerts_count = len(stock_alerts) + len(expiry_alerts)
 
-# ----- Sidebar navigation -----
+# --- Sidebar navigation ---
 menu_labels = [
     "Dashboard",
     "Price Optimization",
@@ -138,7 +136,7 @@ menu_choice = st.sidebar.radio("Go to", menu_labels)
 st.sidebar.markdown("---")
 st.sidebar.markdown("Developed by: **GROUP 1**")
 
-# ----- Main app routing -----
+# --- Main routing ---
 if menu_choice == "Dashboard":
     if data.empty:
         st.warning("⚠️ No data available to display. Please check your data source.")
@@ -275,23 +273,23 @@ elif menu_choice.startswith("🔔 Notifications"):
         if not all(col in data.columns for col in ["Product_Name", "Stock_Remaining", "Expiry_Date"]):
             st.error("Data is missing required columns for alerts.")
         else:
-            st.write(f"Total Alerts: {total_alerts_count}")
             if total_alerts_count == 0:
                 st.success("✅ No active alerts. All inventory looks good.")
             else:
                 if stock_alerts:
                     st.markdown("### 📦 Stock Alerts")
-                    for alert in stock_alerts:
-                        st.error(f"🔻 {alert['message']}")
-                        # Uncomment to send push notifications:
-                        # send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, f"Stock Alert: {alert['message']}")
+                    for alert_msg in stock_alerts:
+                        st.error(f"🔻 {alert_msg}")
+                        # Uncomment below to send Pushover notifications
+                        # send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, f"Stock Alert: {alert_msg}")
 
                 if expiry_alerts:
                     st.markdown("### ⏰ Expiry Alerts")
-                    for alert in expiry_alerts:
-                        st.warning(f"⚠️ {alert['message']}")
-                        # Uncomment to send push notifications:
-                        # send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, f"Expiry Alert: {alert['message']}")
+                    for alert_msg in expiry_alerts:
+                        st.warning(f"⚠️ {alert_msg}")
+                        # Uncomment below to send Pushover notifications
+                        # send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, f"Expiry Alert: {alert_msg}")
+
     else:
         st.warning("⚠️ Please upload or load data to view alerts.")
 
@@ -301,9 +299,10 @@ elif menu_choice == "Raw Data":
     csv = data.to_csv(index=False)
     st.download_button("Download CSV", csv, "easyday_sales_dataset.csv")
 
-# ----- Footer -----
+# Footer
 st.markdown("---")
 st.markdown("<div style='text-align: center;'>Made with ❤️ using Streamlit | Project: MSIT405</div>", unsafe_allow_html=True)
+
 
 
 
