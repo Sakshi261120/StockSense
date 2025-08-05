@@ -1,31 +1,20 @@
-import pandas as pd
-from datetime import datetime
+import http.client
+import urllib
 
-def generate_stock_alerts(df, threshold=5):
-    alerts = []
-    for _, row in df.iterrows():
-        # Use correct column names matching your data
-        if row['Stock_Remaining'] < threshold:
-            alerts.append(f"Only {row['Stock_Remaining']} units left of {row['Product_Name']}.")
-    return alerts
+def send_notification(title, message):
+    conn = http.client.HTTPSConnection("api.pushover.net:443")
+    conn.request(
+        "POST", "/1/messages.json",
+        urllib.parse.urlencode({
+            "token": "aue6x29a79caihi7pt4g27yoef4vv3",         # Replace with your actual app token
+            "user": "umqpi3kryezvwo9mjpqju5qc5j59kx",           # Replace with your actual user key
+            "title": title,
+            "message": message,
+        }),
+        {"Content-type": "application/x-www-form-urlencoded"}
+    )
+    response = conn.getresponse()
+    print(response.status, response.read())
 
-def generate_expiry_alerts(df, days_threshold=7):
-    alerts = []
-    today = datetime.today().date()
-    for _, row in df.iterrows():
-        expiry_date = pd.to_datetime(row['Expiry_Date'], errors='coerce')
-        if pd.isna(expiry_date):
-            continue
-        expiry_date = expiry_date.date()
-        days_to_expiry = (expiry_date - today).days
-        if days_to_expiry <= days_threshold:
-            if days_to_expiry < 0:
-                alerts.append(f"{row['Product_Name']} expired on {expiry_date}.")
-            else:
-                alerts.append(f"{row['Product_Name']} expires in {days_to_expiry} day(s) on {expiry_date}.")
-    return alerts
-
-def get_all_alerts(df, stock_threshold=5, expiry_days=7):
-    return generate_stock_alerts(df, stock_threshold) + generate_expiry_alerts(df, expiry_days)
 
 
