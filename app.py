@@ -5,6 +5,21 @@ import sqlite3
 import plotly.express as px
 from datetime import datetime
 import requests
+def check_inventory(df):
+    today = datetime.today().date()
+    for _, row in df.iterrows():
+        product = row['product_name']
+        quantity = int(row['quantity'])
+        expiry_str = row['expiry_date']
+        expiry_date = pd.to_datetime(expiry_str).date()
+
+        if quantity < 5:
+            st.warning(f"🔔 Low Stock: {product} has only {quantity} units left!")
+            send_notification("Stock Alert", f"Low stock for {product}: {quantity} units left.")
+
+        if expiry_date <= today:
+            st.error(f"⚠️ Expired: {product} expired on {expiry_date}")
+            send_notification("Expiry Alert", f"{product} expired on {expiry_date}")
 
 PUSHOVER_USER_KEY = "umqpi3kryezvwo9mjpqju5qc5j59kx"
 PUSHOVER_API_TOKEN = "aue6x29a79caihi7pt4g27yoef4vv3"
