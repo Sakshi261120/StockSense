@@ -134,12 +134,7 @@ stock_alerts = generate_stock_alerts(data, threshold=stock_threshold)
 expiry_alerts = generate_expiry_alerts(data, days_threshold=expiry_days)
 total_alerts_count = len(stock_alerts) + len(expiry_alerts)
 
-# 🔔 Automatically send Pushover notifications after data load
-for alert in stock_alerts:
-    send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, f"Stock Alert: {alert}")
 
-for alert in expiry_alerts:
-    send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, f"Expiry Alert: {alert}")
 
 # -------------------- Step 3: Sidebar Navigation --------------------
 
