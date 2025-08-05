@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import sqlite3
 import plotly.express as px
+from notification import send_notification
 from datetime import datetime
 import requests
 def check_inventory(df):
