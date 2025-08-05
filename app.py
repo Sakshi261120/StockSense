@@ -5,10 +5,17 @@ import sqlite3
 import plotly.express as px
 from datetime import datetime
 import requests
+import joblib
+from sklearn.linear_model import LinearRegression
+from email.message import EmailMessage
+import smtplib
 
-PUSHOVER_USER_KEY = "umqpi3kryezvwo9mjpqju5qc5j59kx"
-PUSHOVER_API_TOKEN = "aue6x29a79caihi7pt4g27yoef4vv3"
-# 🔔 Pushover notification function
+from notifications import get_all_alerts  # import alert functions
+
+# Pushover credentials - use environment variables in real apps!
+PUSHOVER_USER_KEY = os.getenv("PUSHOVER_USER_KEY", "your_user_key_here")
+PUSHOVER_API_TOKEN = os.getenv("PUSHOVER_API_TOKEN", "your_api_token_here")
+
 def send_pushover_notification(user_key, api_token, message):
     url = "https://api.pushover.net/1/messages.json"
     data = {
@@ -18,42 +25,16 @@ def send_pushover_notification(user_key, api_token, message):
     }
     response = requests.post(url, data=data)
     return response.status_code == 200
-def generate_stock_alerts(df, threshold=5):
-    alerts = []
-    for _, row in df.iterrows():
-        if row.get("Stock_Remaining", 0) < threshold:
-            alerts.append(f"{row['Product_Name']} is low in stock ({row['Stock_Remaining']} units left). Please refill.")
-    return alerts
 
-def generate_expiry_alerts(df, days_threshold=7):
-    alerts = []
-    today = datetime.today()
-    for _, row in df.iterrows():
-        expiry_str = row.get("Expiry_Date")
-        if pd.isna(expiry_str):  # skip missing expiry dates
-            continue
-        try:
-            expiry = pd.to_datetime(expiry_str)
-        except Exception:
-            continue
-        days_left = (expiry - today).days
-        if 0 <= days_left <= days_threshold:
-            alerts.append(f"{row['Product_Name']} is expiring in {days_left} day(s).")
-    return alerts
+def load_data():
+    # Implement your database loading here if needed
+    # Example:
+    # conn = sqlite3.connect('your_db.db')
+    # df = pd.read_sql_query("SELECT * FROM sales", conn)
+    # return df
+    return None  # stub for example
 
-from sklearn.linear_model import LinearRegression
-import numpy as np
-import joblib
-from db_utils import load_data
-from notifications import generate_stock_alerts, generate_expiry_alerts
-from barcode import Code128
-from barcode.writer import ImageWriter
-from PIL import Image
-from io import BytesIO
-import smtplib
-from email.message import EmailMessage
-
-# -------------------- Step 1: Page Configuration and Styling --------------------
+# ----- Streamlit page setup -----
 st.set_page_config(
     page_title="StockSense - Retail Optimizer",
     layout="wide",
@@ -78,23 +59,19 @@ st.markdown("""
 st.title("Welcome to StockSense")
 st.write("Current working directory:", os.getcwd())
 
-# -------------------- Step 2: Load Data (Upload or DB) and Prepare Alerts --------------------
-stock_threshold = 20
-expiry_days = 7
+# ----- Load data -----
 uploaded_file = st.file_uploader("Upload your sales data CSV file", type=["csv"])
 
 if uploaded_file is not None:
     try:
         data = pd.read_csv(uploaded_file)
 
-        # Check required columns
         required_cols = ["Product_Name", "Revenue", "Quantity_Sold", "Stock_Remaining", "Expiry_Date"]
         missing_cols = [col for col in required_cols if col not in data.columns]
         if missing_cols:
             st.error(f"❌ Your file is missing required columns: {', '.join(missing_cols)}")
             st.stop()
 
-        # Process expiry date
         data['Expiry_Date'] = pd.to_datetime(data['Expiry_Date'], errors='coerce')
         today = pd.to_datetime(datetime.today().date())
         data['Days_To_Expiry'] = (data['Expiry_Date'] - today).dt.days
@@ -109,12 +86,9 @@ if uploaded_file is not None:
     except Exception as e:
         st.error(f"❌ Error reading file: {e}")
         st.stop()
-
 else:
-    # Load from database fallback
     data = load_data()
     if data is not None and not data.empty:
-        # Process expiry date similarly
         data['Expiry_Date'] = pd.to_datetime(data['Expiry_Date'], errors='coerce')
         today = pd.to_datetime(datetime.today().date())
         data['Days_To_Expiry'] = (data['Expiry_Date'] - today).dt.days
@@ -122,21 +96,21 @@ else:
     else:
         st.warning("⚠️ No data available from database.")
         data = pd.DataFrame(columns=["Product_Name", "Revenue", "Quantity_Sold", "Stock_Remaining", "Expiry_Date", "Days_To_Expiry"])
-    if data is not None and not data.empty:
-        # success = send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, "Test notification from StockSense")
-        # st.write("Pushover test notification status:", success)
-# Alert Settings sliders - place immediately after data is loaded
-        stock_threshold = st.sidebar.slider("Stock Alert Threshold", 1, 100, 20)
-        expiry_days = st.sidebar.slider("Expiry Alert Days", 1, 30, 7)
 
+# ----- Alert thresholds sliders (always visible) -----
+stock_threshold = st.sidebar.slider("Stock Alert Threshold", 1, 100, 20)
+expiry_days = st.sidebar.slider("Expiry Alert Days", 1, 30, 7)
 
-# Use same logic as notifications page
-stock_alerts = generate_stock_alerts(data, threshold=stock_threshold)
-expiry_alerts = generate_expiry_alerts(data, days_threshold=expiry_days)
+# ----- Generate alerts -----
+try:
+    stock_alerts, expiry_alerts = get_all_alerts(data, stock_threshold, expiry_days)
+except ValueError as e:
+    st.error(str(e))
+    stock_alerts, expiry_alerts = [], []
+
 total_alerts_count = len(stock_alerts) + len(expiry_alerts)
 
-# -------------------- Step 3: Sidebar Navigation --------------------
-
+# ----- Sidebar navigation -----
 menu_labels = [
     "Dashboard",
     "Price Optimization",
@@ -147,15 +121,13 @@ menu_labels = [
 ]
 
 st.sidebar.markdown("## 📌 Navigation")
-menu = st.sidebar.radio("Go to", menu_labels)
+menu_choice = st.sidebar.radio("Go to", menu_labels)
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("Developed by: **GROUP 1**")
 
-
-# -------------------- Step 4: Main App Logic --------------------
-
-if menu == "Dashboard":
+# ----- Main app routing -----
+if menu_choice == "Dashboard":
     if data.empty:
         st.warning("⚠️ No data available to display. Please check your data source.")
     else:
@@ -168,7 +140,6 @@ if menu == "Dashboard":
         col2.metric("🛒 Items Sold", total_items)
         col3.metric("📦 Unique Products", unique_products)
 
-        # Top 10 products bar chart
         top_products = data.groupby("Product_Name")["Revenue"].sum().sort_values(ascending=False).head(10)
         fig = px.bar(
             top_products,
@@ -181,8 +152,7 @@ if menu == "Dashboard":
         fig.update_layout(xaxis_tickangle=-45)
         st.plotly_chart(fig, use_container_width=True)
 
-
-elif menu == "Price Optimization":
+elif menu_choice == "Price Optimization":
     st.subheader("🔧 Train Model & 📊 Predict Prices (End-to-End ML)")
 
     train_file = st.file_uploader("📁 Upload CSV to train model (must have 'Quantity_Sold' and 'Unit_Price')", type=["csv"], key="train")
@@ -221,7 +191,7 @@ elif menu == "Price Optimization":
     except Exception as e:
         st.error(f"❌ Prediction failed: {e}")
 
-elif menu == "Stock Alerts":
+elif menu_choice == "Stock Alerts":
     st.header("📦 Stock Refill Alerts")
     threshold = st.slider("Set stock threshold", 0, 100, stock_threshold)
     low_stock = data[data["Stock_Remaining"] < threshold]
@@ -243,7 +213,7 @@ elif menu == "Stock Alerts":
             if recipient:
                 try:
                     gmail_user = '6120sakshi@gmail.com'
-                    gmail_password = 'scnbsvbajhaltwus'  # Your app password here
+                    gmail_password = os.getenv('GMAIL_PASSWORD', 'your_app_password_here')
 
                     msg = EmailMessage()
                     msg['Subject'] = '⚠️ Low Stock Alert'
@@ -260,7 +230,7 @@ Best,
 StockSense App
                     """)
 
-                    msg.add_attachment(csv_low_stock, filename="low_stock_report.csv")
+                    msg.add_attachment(csv_low_stock.encode(), filename="low_stock_report.csv")
 
                     with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
                         smtp.login(gmail_user, gmail_password)
@@ -272,7 +242,7 @@ StockSense App
             else:
                 st.warning("⚠️ Please enter a valid recipient email address.")
 
-elif menu == "Expiry Alerts":
+elif menu_choice == "Expiry Alerts":
     st.header("⏰ Expiry Date Alerts")
     days = st.slider("Days to expiry", 1, 30, expiry_days)
     expiring_soon = data[data["Days_To_Expiry"] <= days]
@@ -286,56 +256,43 @@ elif menu == "Expiry Alerts":
         csv_expiry = expiring_soon.to_csv(index=False)
         st.download_button("📥 Download Expiry Report", data=csv_expiry, file_name="expiry_report.csv", mime="text/csv")
 
-elif menu == "Notifications":
+elif menu_choice.startswith("🔔 Notifications"):
     st.subheader("🔔 Notifications Center")
 
     if data is not None and not data.empty:
         if not all(col in data.columns for col in ["Product_Name", "Stock_Remaining", "Expiry_Date"]):
             st.error("Data is missing required columns for alerts.")
         else:
-            # Generate alerts
-            stock_alerts = generate_stock_alerts(data, threshold=stock_threshold)
-            expiry_alerts = generate_expiry_alerts(data, days_threshold=expiry_days)
-
-            st.write("Stock Alerts:", stock_alerts)
-            st.write("Expiry Alerts:", expiry_alerts)
-
-            for alert in stock_alerts:
-                st.write("Sending stock alert:", alert)
-                send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, f"Stock Alert: {alert}")
-
-            for alert in expiry_alerts:
-                st.write("Sending expiry alert:", alert)
-                send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, f"Expiry Alert: {alert}")
-
-            total_alerts = len(stock_alerts) + len(expiry_alerts)
-
-            if total_alerts == 0:
+            st.write(f"Total Alerts: {total_alerts_count}")
+            if total_alerts_count == 0:
                 st.success("✅ No active alerts. All inventory looks good.")
             else:
                 if stock_alerts:
                     st.markdown("### 📦 Stock Alerts")
                     for alert in stock_alerts:
-                        st.error(f"🔻 {alert}")
+                        st.error(f"🔻 {alert['message']}")
+                        # Uncomment the line below to send push notifications
+                        # send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, f"Stock Alert: {alert['message']}")
 
                 if expiry_alerts:
                     st.markdown("### ⏰ Expiry Alerts")
                     for alert in expiry_alerts:
-                        st.warning(f"⚠️ {alert}")
-
+                        st.warning(f"⚠️ {alert['message']}")
+                        # Uncomment the line below to send push notifications
+                        # send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, f"Expiry Alert: {alert['message']}")
     else:
         st.warning("⚠️ Please upload or load data to view alerts.")
 
-
-elif menu == "Raw Data":
+elif menu_choice == "Raw Data":
     st.header("📋 Raw Dataset")
     st.dataframe(data)
     csv = data.to_csv(index=False)
     st.download_button("Download CSV", csv, "easyday_sales_dataset.csv")
 
-# -------------------- Footer --------------------
+# ----- Footer -----
 st.markdown("---")
 st.markdown("<div style='text-align: center;'>Made with ❤️ using Streamlit | Project: MSIT405</div>", unsafe_allow_html=True)
+
 
 
 
