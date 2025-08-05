@@ -1,18 +1,18 @@
 import streamlit as st
 import os
 import pandas as pd
+from datetime import datetime
 import sqlite3
 import plotly.express as px
-from datetime import datetime
 import requests
 import joblib
 from sklearn.linear_model import LinearRegression
 from email.message import EmailMessage
 import smtplib
 
-from notifications import get_all_alerts  # import alert functions
+from notifications import get_all_alerts  # Make sure notifications.py is in the same folder or installed properly
 
-# Pushover credentials - use environment variables in real apps!
+# Pushover credentials (use environment variables in production)
 PUSHOVER_USER_KEY = os.getenv("PUSHOVER_USER_KEY", "your_user_key_here")
 PUSHOVER_API_TOKEN = os.getenv("PUSHOVER_API_TOKEN", "your_api_token_here")
 
@@ -27,12 +27,22 @@ def send_pushover_notification(user_key, api_token, message):
     return response.status_code == 200
 
 def load_data():
-    # Implement your database loading here if needed
-    # Example:
-    # conn = sqlite3.connect('your_db.db')
-    # df = pd.read_sql_query("SELECT * FROM sales", conn)
-    # return df
-    return None  # stub for example
+    """
+    Load data from SQLite database as fallback.
+    Adjust this function according to your database type and schema.
+    """
+    try:
+        conn = sqlite3.connect('your_database_file.db')  # Change to your DB path
+        query = """
+        SELECT Product_Name, Revenue, Quantity_Sold, Stock_Remaining, Expiry_Date
+        FROM sales_table;
+        """  # Change to your actual table and columns
+        df = pd.read_sql_query(query, conn)
+        conn.close()
+        return df
+    except Exception as e:
+        st.error(f"❌ Error loading data from database: {e}")
+        return None
 
 # ----- Streamlit page setup -----
 st.set_page_config(
@@ -87,12 +97,14 @@ if uploaded_file is not None:
         st.error(f"❌ Error reading file: {e}")
         st.stop()
 else:
+    # Fallback: load from database
     data = load_data()
     if data is not None and not data.empty:
         data['Expiry_Date'] = pd.to_datetime(data['Expiry_Date'], errors='coerce')
         today = pd.to_datetime(datetime.today().date())
         data['Days_To_Expiry'] = (data['Expiry_Date'] - today).dt.days
         st.info(f"ℹ️ Loaded {len(data)} rows from database.")
+        st.write("Data preview from database:", data.head())
     else:
         st.warning("⚠️ No data available from database.")
         data = pd.DataFrame(columns=["Product_Name", "Revenue", "Quantity_Sold", "Stock_Remaining", "Expiry_Date", "Days_To_Expiry"])
@@ -271,14 +283,14 @@ elif menu_choice.startswith("🔔 Notifications"):
                     st.markdown("### 📦 Stock Alerts")
                     for alert in stock_alerts:
                         st.error(f"🔻 {alert['message']}")
-                        # Uncomment the line below to send push notifications
+                        # Uncomment to send push notifications:
                         # send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, f"Stock Alert: {alert['message']}")
 
                 if expiry_alerts:
                     st.markdown("### ⏰ Expiry Alerts")
                     for alert in expiry_alerts:
                         st.warning(f"⚠️ {alert['message']}")
-                        # Uncomment the line below to send push notifications
+                        # Uncomment to send push notifications:
                         # send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, f"Expiry Alert: {alert['message']}")
     else:
         st.warning("⚠️ Please upload or load data to view alerts.")
