@@ -15,7 +15,7 @@ PUSHOVER_USER_KEY = "umqpi3kryezvwo9mjpqju5qc5j59kx"
 PUSHOVER_API_TOKEN = "aue6x29a79caihi7pt4g27yoef4vv3"
 
 REQUIRED_COLUMNS = [
-    "Date", "Store_ID", "Product_Name", "Category", "Unit_Price", 
+    "Date", "Store_ID", "Product_Name", "Category", "Unit_Price",
     "Quantity_Sold", "Discount", "Revenue", "Stock_Remaining", "Expiry_Date"
 ]
 
@@ -91,31 +91,35 @@ st.set_page_config(page_title="StockSense - Retail Optimizer", layout="wide", pa
 st.markdown("<style>.main{background-color:#f7f9fc;}</style>", unsafe_allow_html=True)
 st.title("📊 StockSense - Retail Optimizer")
 
-# =================== LOAD DATA WITH VALIDATION ===================
+# =================== LOAD DATA WITH FALLBACK ===================
 stock_threshold = st.sidebar.slider("Stock Alert Threshold", 1, 100, 20)
 expiry_days = st.sidebar.slider("Expiry Alert Days", 1, 30, 7)
 
 uploaded_file = st.file_uploader("Upload your sales data CSV file", type=["csv"])
 
+data = pd.DataFrame()  # Initialize empty DataFrame
+
 if uploaded_file is not None:
     try:
-        data = pd.read_csv(uploaded_file)
-        missing_cols = [col for col in REQUIRED_COLUMNS if col not in data.columns]
+        temp_data = pd.read_csv(uploaded_file)
+        missing_cols = [col for col in REQUIRED_COLUMNS if col not in temp_data.columns]
         if missing_cols:
             st.error(f"❌ Uploaded CSV is missing required columns: {', '.join(missing_cols)}")
-            st.stop()
+            st.info("Loading data from database as fallback...")
+            data = load_data_from_db()
         else:
             st.success("✅ CSV file loaded successfully!")
-            # No saving to DB here per your request
+            data = temp_data
     except Exception as e:
         st.error(f"❌ Error reading CSV: {e}")
-        st.stop()
+        st.info("Loading data from database as fallback...")
+        data = load_data_from_db()
 else:
     st.info("📂 No CSV uploaded, loading data from database...")
     data = load_data_from_db()
 
 if data.empty:
-    st.warning("⚠️ No data available to display from CSV or database.")
+    st.warning("⚠️ No data available from CSV or database.")
     st.stop()
 
 # =================== PROCESS DATA ===================
