@@ -1,4 +1,5 @@
 import streamlit as st
+import os
 import pandas as pd
 import sqlite3
 import plotly.express as px
@@ -6,32 +7,42 @@ from datetime import datetime
 import requests
 from sklearn.linear_model import LinearRegression
 import joblib
+import smtplib
+from email.message import EmailMessage
 
-# =================== CONFIG ===================
+# Constants for DB
 DB_PATH = "sales.db"
 TABLE_NAME = "sales_table"
 
 PUSHOVER_USER_KEY = "umqpi3kryezvwo9mjpqju5qc5j59kx"
 PUSHOVER_API_TOKEN = "aue6x29a79caihi7pt4g27yoef4vv3"
 
-REQUIRED_COLUMNS = [
-    "Date", "Store_ID", "Product_Name", "Category", "Unit_Price",
-    "Quantity_Sold", "Discount", "Revenue", "Stock_Remaining", "Expiry_Date"
-]
-
-# =================== DB FUNCTIONS ===================
-def load_data_from_db():
+# --------- Database load function ---------
+def load_data():
+    """
+    Load all data from the sales_table SQLite DB.
+    Returns pandas DataFrame or empty DataFrame if error.
+    """
     try:
         conn = sqlite3.connect(DB_PATH)
-        query = f"SELECT * FROM {TABLE_NAME};"
-        df = pd.read_sql_query(query, conn)
+        df = pd.read_sql_query(f"SELECT * FROM {TABLE_NAME};", conn)
         conn.close()
         return df
     except Exception as e:
-        st.error(f"Error loading data from database: {e}")
+        print(f"Error loading data from DB: {e}")
         return pd.DataFrame()
 
-# =================== ALERT FUNCTIONS ===================
+# --------- Notification function ---------
+def send_pushover_notification(user_key, api_token, message):
+    url = "https://api.pushover.net/1/messages.json"
+    data = {"token": api_token, "user": user_key, "message": message}
+    try:
+        response = requests.post(url, data=data)
+        return response.status_code == 200
+    except Exception:
+        return False
+
+# --------- Alerts generators ---------
 def generate_stock_alerts(df, threshold=5):
     alerts = []
     for _, row in df.iterrows():
@@ -55,60 +66,60 @@ def generate_expiry_alerts(df, days_threshold=7):
             alerts.append(f"{row['Product_Name']} is expiring in {days_left} day(s).")
     return alerts
 
-def send_pushover_notification(user_key, api_token, message):
-    url = "https://api.pushover.net/1/messages.json"
-    data = {"token": api_token, "user": user_key, "message": message}
-    try:
-        requests.post(url, data=data)
-    except Exception as e:
-        st.error(f"Pushover error: {e}")
-
-# =================== PAGE CONFIG ===================
+# --------- Streamlit Page Config ---------
 st.set_page_config(page_title="StockSense - Retail Optimizer", layout="wide", page_icon="📊")
 st.markdown("<style>.main{background-color:#f7f9fc;}</style>", unsafe_allow_html=True)
 st.title("📊 StockSense - Retail Optimizer")
 
-# =================== LOAD DATA WITH FALLBACK ===================
+# --------- Sidebar Alert Settings ---------
 stock_threshold = st.sidebar.slider("Stock Alert Threshold", 1, 100, 20)
 expiry_days = st.sidebar.slider("Expiry Alert Days", 1, 30, 7)
 
+# --------- Upload CSV or load DB ---------
 uploaded_file = st.file_uploader("Upload your sales data CSV file", type=["csv"])
-
-data = pd.DataFrame()  # Initialize empty DataFrame
 
 if uploaded_file is not None:
     try:
-        temp_data = pd.read_csv(uploaded_file)
-        missing_cols = [col for col in REQUIRED_COLUMNS if col not in temp_data.columns]
+        data = pd.read_csv(uploaded_file)
+        required_cols = ["Product_Name", "Revenue", "Quantity_Sold", "Stock_Remaining", "Expiry_Date"]
+        missing_cols = [col for col in required_cols if col not in data.columns]
         if missing_cols:
             st.error(f"❌ Uploaded CSV is missing required columns: {', '.join(missing_cols)}")
             st.info("Loading data from database as fallback...")
-            data = load_data_from_db()
+            data = load_data()
+            if data.empty:
+                st.warning("⚠️ No data available from database.")
+                st.stop()
         else:
-            st.success("✅ CSV file loaded successfully!")
-            data = temp_data
+            # Process expiry date
+            data['Expiry_Date'] = pd.to_datetime(data['Expiry_Date'], errors='coerce')
+            today = pd.to_datetime(datetime.today().date())
+            data['Days_To_Expiry'] = (data['Expiry_Date'] - today).dt.days
+            st.success("✅ Uploaded CSV loaded successfully!")
     except Exception as e:
         st.error(f"❌ Error reading CSV: {e}")
         st.info("Loading data from database as fallback...")
-        data = load_data_from_db()
+        data = load_data()
+        if data.empty:
+            st.warning("⚠️ No data available from database.")
+            st.stop()
 else:
     st.info("📂 No CSV uploaded, loading data from database...")
-    data = load_data_from_db()
+    data = load_data()
+    if data.empty:
+        st.warning("⚠️ No data available from database.")
+        st.stop()
+    else:
+        data['Expiry_Date'] = pd.to_datetime(data['Expiry_Date'], errors='coerce')
+        today = pd.to_datetime(datetime.today().date())
+        data['Days_To_Expiry'] = (data['Expiry_Date'] - today).dt.days
 
-if data.empty:
-    st.warning("⚠️ No data available from CSV or database.")
-    st.stop()
-
-# =================== PROCESS DATA ===================
-data["Expiry_Date"] = pd.to_datetime(data["Expiry_Date"], errors="coerce")
-today = pd.to_datetime(datetime.today().date())
-data["Days_To_Expiry"] = (data["Expiry_Date"] - today).dt.days
-
+# --------- Generate Alerts ---------
 stock_alerts = generate_stock_alerts(data, threshold=stock_threshold)
 expiry_alerts = generate_expiry_alerts(data, days_threshold=expiry_days)
 total_alerts_count = len(stock_alerts) + len(expiry_alerts)
 
-# =================== SIDEBAR MENU ===================
+# --------- Sidebar Navigation ---------
 menu_labels = [
     "Dashboard",
     "Price Optimization",
@@ -121,7 +132,8 @@ menu = st.sidebar.radio("Go to", menu_labels)
 st.sidebar.markdown("---")
 st.sidebar.markdown("Developed by: **GROUP 1**")
 
-# =================== DASHBOARD ===================
+# --------- Menu Pages ---------
+
 if menu == "Dashboard":
     total_revenue = data["Revenue"].sum()
     total_items = data["Quantity_Sold"].sum()
@@ -140,10 +152,8 @@ if menu == "Dashboard":
     fig.update_layout(xaxis_tickangle=-45)
     st.plotly_chart(fig, use_container_width=True)
 
-# =================== PRICE OPTIMIZATION ===================
 elif menu == "Price Optimization":
     st.subheader("Train & Predict Prices")
-
     train_file = st.file_uploader("Upload training CSV (Quantity_Sold, Unit_Price)", type=["csv"], key="train")
     if train_file:
         try:
@@ -172,7 +182,6 @@ elif menu == "Price Optimization":
         except Exception as e:
             st.error(f"Prediction failed: {e}")
 
-# =================== STOCK ALERTS ===================
 elif menu == "Stock Alerts":
     st.header("📦 Stock Alerts")
     low_stock = data[data["Stock_Remaining"] < stock_threshold]
@@ -182,7 +191,6 @@ elif menu == "Stock Alerts":
         st.warning(f"{len(low_stock)} products are below the threshold!")
         st.dataframe(low_stock[["Product_Name", "Stock_Remaining", "Quantity_Sold"]])
 
-# =================== EXPIRY ALERTS ===================
 elif menu == "Expiry Alerts":
     st.header("⏰ Expiry Alerts")
     expiring_soon = data[data["Days_To_Expiry"] <= expiry_days]
@@ -192,7 +200,6 @@ elif menu == "Expiry Alerts":
         st.warning(f"{len(expiring_soon)} products expiring soon!")
         st.dataframe(expiring_soon[["Product_Name", "Expiry_Date", "Days_To_Expiry", "Stock_Remaining"]])
 
-# =================== NOTIFICATIONS ===================
 elif menu.startswith("🔔 Notifications"):
     st.subheader("🔔 Notifications Center")
     for alert in stock_alerts:
@@ -204,10 +211,10 @@ elif menu.startswith("🔔 Notifications"):
     if not stock_alerts and not expiry_alerts:
         st.success("✅ No active alerts.")
 
-# =================== RAW DATA ===================
 elif menu == "Raw Data":
     st.dataframe(data)
     st.download_button("Download CSV", data.to_csv(index=False), "sales_data.csv")
+
 
 
 
