@@ -19,29 +19,6 @@ REQUIRED_COLUMNS = [
     "Quantity_Sold", "Discount", "Revenue", "Stock_Remaining", "Expiry_Date"
 ]
 
-# =================== DATABASE INIT ===================
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute(f"""
-        CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
-            Date TEXT,
-            Store_ID TEXT,
-            Product_Name TEXT,
-            Category TEXT,
-            Unit_Price REAL,
-            Quantity_Sold INTEGER,
-            Discount REAL,
-            Revenue REAL,
-            Stock_Remaining INTEGER,
-            Expiry_Date TEXT
-        )
-    """)
-    conn.commit()
-    conn.close()
-
-init_db()
-
 # =================== DB FUNCTIONS ===================
 def load_data_from_db():
     try:
