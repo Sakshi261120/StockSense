@@ -25,7 +25,7 @@ def load_data():
         return pd.DataFrame()
     try:
         conn = sqlite3.connect(DB_PATH)
-        df = pd.read_sql_query("SELECT * FROM sales_table", conn)
+        df = pd.read_sql_query("SELECT * FROM sales_data", conn)
         conn.close()
         return df
     except Exception as e:
