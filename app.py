@@ -11,7 +11,7 @@ import smtplib
 from email.message import EmailMessage
 
 # =================== CONFIG ===================
-DB_PATH = "retail_data.db"  # path to your SQLite database
+DB_PATH = os.path.abspath("retail_data.db")  # Use absolute path to avoid confusion
 
 PUSHOVER_USER_KEY = "umqpi3kryezvwo9mjpqju5qc5j59kx"
 PUSHOVER_API_TOKEN = "aue6x29a79caihi7pt4g27yoef4vv3"
@@ -19,6 +19,7 @@ PUSHOVER_API_TOKEN = "aue6x29a79caihi7pt4g27yoef4vv3"
 # =================== DATABASE LOADER ===================
 def load_data():
     try:
+        st.write(f"Trying to connect to DB at: {DB_PATH}")
         conn = sqlite3.connect(DB_PATH)
         query = "SELECT * FROM sales_table"
         df = pd.read_sql_query(query, conn)
@@ -251,7 +252,7 @@ Best,
 StockSense App
                     """)
 
-                    msg.add_attachment(csv_low_stock, filename="low_stock_report.csv")
+                    msg.add_attachment(csv_low_stock.encode('utf-8'), filename="low_stock_report.csv")
 
                     with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
                         smtp.login(gmail_user, gmail_password)
@@ -312,6 +313,7 @@ elif menu == "Raw Data":
 # =================== FOOTER ===================
 st.markdown("---")
 st.markdown("<div style='text-align: center;'>Made with ❤️ using Streamlit | Project: MSIT405</div>", unsafe_allow_html=True)
+
 
 
 
