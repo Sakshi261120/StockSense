@@ -7,42 +7,34 @@ from datetime import datetime
 import requests
 from sklearn.linear_model import LinearRegression
 import joblib
-import smtplib
-from email.message import EmailMessage
 
-# Constants for DB
-DB_PATH = "sales.db"
-TABLE_NAME = "sales_table"
+# =================== CONFIG ===================
+DB_PATH = "sales.db"  # path to your SQLite database
 
 PUSHOVER_USER_KEY = "umqpi3kryezvwo9mjpqju5qc5j59kx"
 PUSHOVER_API_TOKEN = "aue6x29a79caihi7pt4g27yoef4vv3"
 
-# --------- Database load function ---------
+# =================== DATABASE LOADER ===================
 def load_data():
-    """
-    Load all data from the sales_table SQLite DB.
-    Returns pandas DataFrame or empty DataFrame if error.
-    """
     try:
         conn = sqlite3.connect(DB_PATH)
-        df = pd.read_sql_query(f"SELECT * FROM {TABLE_NAME};", conn)
+        query = "SELECT * FROM sales_table"
+        df = pd.read_sql_query(query, conn)
         conn.close()
         return df
     except Exception as e:
-        print(f"Error loading data from DB: {e}")
+        st.error(f"❌ Could not load data from database: {e}")
         return pd.DataFrame()
 
-# --------- Notification function ---------
+# =================== NOTIFICATIONS ===================
 def send_pushover_notification(user_key, api_token, message):
     url = "https://api.pushover.net/1/messages.json"
     data = {"token": api_token, "user": user_key, "message": message}
     try:
-        response = requests.post(url, data=data)
-        return response.status_code == 200
-    except Exception:
-        return False
+        requests.post(url, data=data)
+    except Exception as e:
+        st.error(f"Pushover notification failed: {e}")
 
-# --------- Alerts generators ---------
 def generate_stock_alerts(df, threshold=5):
     alerts = []
     for _, row in df.iterrows():
@@ -66,16 +58,16 @@ def generate_expiry_alerts(df, days_threshold=7):
             alerts.append(f"{row['Product_Name']} is expiring in {days_left} day(s).")
     return alerts
 
-# --------- Streamlit Page Config ---------
+# =================== PAGE CONFIG ===================
 st.set_page_config(page_title="StockSense - Retail Optimizer", layout="wide", page_icon="📊")
 st.markdown("<style>.main{background-color:#f7f9fc;}</style>", unsafe_allow_html=True)
 st.title("📊 StockSense - Retail Optimizer")
 
-# --------- Sidebar Alert Settings ---------
+# =================== SETTINGS ===================
 stock_threshold = st.sidebar.slider("Stock Alert Threshold", 1, 100, 20)
 expiry_days = st.sidebar.slider("Expiry Alert Days", 1, 30, 7)
 
-# --------- Upload CSV or load DB ---------
+# =================== LOAD DATA ===================
 uploaded_file = st.file_uploader("Upload your sales data CSV file", type=["csv"])
 
 if uploaded_file is not None:
@@ -85,24 +77,15 @@ if uploaded_file is not None:
         missing_cols = [col for col in required_cols if col not in data.columns]
         if missing_cols:
             st.error(f"❌ Uploaded CSV is missing required columns: {', '.join(missing_cols)}")
-            st.info("Loading data from database as fallback...")
-            data = load_data()
-            if data.empty:
-                st.warning("⚠️ No data available from database.")
-                st.stop()
+            st.stop()  # Stop here, do NOT fallback
         else:
-            # Process expiry date
             data['Expiry_Date'] = pd.to_datetime(data['Expiry_Date'], errors='coerce')
             today = pd.to_datetime(datetime.today().date())
             data['Days_To_Expiry'] = (data['Expiry_Date'] - today).dt.days
             st.success("✅ Uploaded CSV loaded successfully!")
     except Exception as e:
         st.error(f"❌ Error reading CSV: {e}")
-        st.info("Loading data from database as fallback...")
-        data = load_data()
-        if data.empty:
-            st.warning("⚠️ No data available from database.")
-            st.stop()
+        st.stop()
 else:
     st.info("📂 No CSV uploaded, loading data from database...")
     data = load_data()
@@ -114,12 +97,12 @@ else:
         today = pd.to_datetime(datetime.today().date())
         data['Days_To_Expiry'] = (data['Expiry_Date'] - today).dt.days
 
-# --------- Generate Alerts ---------
+# =================== ALERTS ===================
 stock_alerts = generate_stock_alerts(data, threshold=stock_threshold)
 expiry_alerts = generate_expiry_alerts(data, days_threshold=expiry_days)
 total_alerts_count = len(stock_alerts) + len(expiry_alerts)
 
-# --------- Sidebar Navigation ---------
+# =================== SIDEBAR MENU ===================
 menu_labels = [
     "Dashboard",
     "Price Optimization",
@@ -132,8 +115,7 @@ menu = st.sidebar.radio("Go to", menu_labels)
 st.sidebar.markdown("---")
 st.sidebar.markdown("Developed by: **GROUP 1**")
 
-# --------- Menu Pages ---------
-
+# =================== PAGES ===================
 if menu == "Dashboard":
     total_revenue = data["Revenue"].sum()
     total_items = data["Quantity_Sold"].sum()
@@ -154,6 +136,7 @@ if menu == "Dashboard":
 
 elif menu == "Price Optimization":
     st.subheader("Train & Predict Prices")
+
     train_file = st.file_uploader("Upload training CSV (Quantity_Sold, Unit_Price)", type=["csv"], key="train")
     if train_file:
         try:
