@@ -11,7 +11,7 @@ import smtplib
 from email.message import EmailMessage
 
 # =================== CONFIG ===================
-DB_PATH = "sales.db"  # path to your SQLite database
+DB_PATH = "reatil_data.db"  # path to your SQLite database
 
 PUSHOVER_USER_KEY = "umqpi3kryezvwo9mjpqju5qc5j59kx"
 PUSHOVER_API_TOKEN = "aue6x29a79caihi7pt4g27yoef4vv3"
