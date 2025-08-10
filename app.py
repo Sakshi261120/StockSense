@@ -14,6 +14,11 @@ TABLE_NAME = "sales_table"
 PUSHOVER_USER_KEY = "umqpi3kryezvwo9mjpqju5qc5j59kx"
 PUSHOVER_API_TOKEN = "aue6x29a79caihi7pt4g27yoef4vv3"
 
+REQUIRED_COLUMNS = [
+    "Date", "Store_ID", "Product_Name", "Category", "Unit_Price", 
+    "Quantity_Sold", "Discount", "Revenue", "Stock_Remaining", "Expiry_Date"
+]
+
 # =================== DATABASE INIT ===================
 def init_db():
     conn = sqlite3.connect(DB_PATH)
@@ -86,7 +91,7 @@ st.set_page_config(page_title="StockSense - Retail Optimizer", layout="wide", pa
 st.markdown("<style>.main{background-color:#f7f9fc;}</style>", unsafe_allow_html=True)
 st.title("📊 StockSense - Retail Optimizer")
 
-# =================== LOAD DATA WITH FALLBACK ===================
+# =================== LOAD DATA WITH VALIDATION ===================
 stock_threshold = st.sidebar.slider("Stock Alert Threshold", 1, 100, 20)
 expiry_days = st.sidebar.slider("Expiry Alert Days", 1, 30, 7)
 
@@ -95,8 +100,13 @@ uploaded_file = st.file_uploader("Upload your sales data CSV file", type=["csv"]
 if uploaded_file is not None:
     try:
         data = pd.read_csv(uploaded_file)
-        st.success("✅ CSV file loaded successfully!")
-        # IMPORTANT: NO saving to database here per your requirement
+        missing_cols = [col for col in REQUIRED_COLUMNS if col not in data.columns]
+        if missing_cols:
+            st.error(f"❌ Uploaded CSV is missing required columns: {', '.join(missing_cols)}")
+            st.stop()
+        else:
+            st.success("✅ CSV file loaded successfully!")
+            # No saving to DB here per your request
     except Exception as e:
         st.error(f"❌ Error reading CSV: {e}")
         st.stop()
@@ -217,6 +227,7 @@ elif menu.startswith("🔔 Notifications"):
 elif menu == "Raw Data":
     st.dataframe(data)
     st.download_button("Download CSV", data.to_csv(index=False), "sales_data.csv")
+
 
 
 
