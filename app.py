@@ -223,7 +223,7 @@ elif menu == "Stock Alerts":
         st.warning(f"⚠️ {len(low_stock)} products are below the stock threshold of {threshold}. Please consider restocking.")
         st.dataframe(low_stock[["Product_Name", "Stock_Remaining", "Quantity_Sold"]])
 
-        csv_low_stock = low_stock.to_csv(index=False)
+        csv_low_stock = low_stock.to_csv(index=False).encode('utf-8')  # encode CSV for attachment
         st.download_button("📥 Download Low Stock Report", data=csv_low_stock, file_name="low_stock_report.csv", mime="text/csv")
 
         st.subheader("📧 Send Low Stock Report to Email")
@@ -251,7 +251,7 @@ Best,
 StockSense App
                     """)
 
-                    msg.add_attachment(csv_low_stock, filename="low_stock_report.csv")
+                    msg.add_attachment(csv_low_stock, maintype="text", subtype="csv", filename="low_stock_report.csv")
 
                     with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
                         smtp.login(gmail_user, gmail_password)
@@ -274,7 +274,7 @@ elif menu == "Expiry Alerts":
         st.warning(f"⚠️ {len(expiring_soon)} products expiring in the next {days} days!")
         st.dataframe(expiring_soon[["Product_Name", "Expiry_Date", "Days_To_Expiry", "Stock_Remaining"]])
 
-        csv_expiry = expiring_soon.to_csv(index=False)
+        csv_expiry = expiring_soon.to_csv(index=False).encode('utf-8')
         st.download_button("📥 Download Expiry Report", data=csv_expiry, file_name="expiry_report.csv", mime="text/csv")
 
 elif menu.startswith("🔔 Notifications"):
@@ -306,12 +306,13 @@ elif menu.startswith("🔔 Notifications"):
 elif menu == "Raw Data":
     st.header("📋 Raw Dataset")
     st.dataframe(data)
-    csv = data.to_csv(index=False)
+    csv = data.to_csv(index=False).encode('utf-8')
     st.download_button("Download CSV", csv, "sales_data.csv")
 
 # =================== FOOTER ===================
 st.markdown("---")
 st.markdown("<div style='text-align: center;'>Made with ❤️ using Streamlit | Project: MSIT405</div>", unsafe_allow_html=True)
+
 
 
 
