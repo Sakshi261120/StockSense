@@ -1,5 +1,4 @@
 import streamlit as st
-import os
 import pandas as pd
 import sqlite3
 import plotly.express as px
@@ -9,7 +8,7 @@ from sklearn.linear_model import LinearRegression
 import joblib
 
 # =================== CONFIG ===================
-DB_PATH = "sales.db"  # change if your DB file is elsewhere
+DB_PATH = "sales.db"
 TABLE_NAME = "sales_table"
 
 PUSHOVER_USER_KEY = "umqpi3kryezvwo9mjpqju5qc5j59kx"
@@ -17,7 +16,6 @@ PUSHOVER_API_TOKEN = "aue6x29a79caihi7pt4g27yoef4vv3"
 
 # =================== DATABASE INIT ===================
 def init_db():
-    """Ensure database and table exist."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute(f"""
@@ -37,45 +35,22 @@ def init_db():
     conn.commit()
     conn.close()
 
-# Call it at startup
 init_db()
 
-# =================== FUNCTIONS ===================
-def send_pushover_notification(user_key, api_token, message):
-    """Send Pushover notification."""
-    url = "https://api.pushover.net/1/messages.json"
-    data = {"token": api_token, "user": user_key, "message": message}
-    try:
-        requests.post(url, data=data)
-    except Exception as e:
-        st.error(f"Pushover error: {e}")
-
+# =================== DB FUNCTIONS ===================
 def load_data_from_db():
-    """Load data from SQLite DB."""
     try:
         conn = sqlite3.connect(DB_PATH)
-        query = f"""
-            SELECT Product_Name, Revenue, Quantity_Sold, Stock_Remaining, Expiry_Date
-            FROM {TABLE_NAME};
-        """
+        query = f"SELECT * FROM {TABLE_NAME};"
         df = pd.read_sql_query(query, conn)
         conn.close()
         return df
     except Exception as e:
-        st.error(f"❌ Error loading data from database: {e}")
+        st.error(f"Error loading data from database: {e}")
         return pd.DataFrame()
 
-def save_csv_to_db(df):
-    """Save uploaded CSV to database table."""
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        df.to_sql(TABLE_NAME, conn, if_exists="replace", index=False)
-        conn.close()
-    except Exception as e:
-        st.error(f"❌ Error saving data to database: {e}")
-
+# =================== ALERT FUNCTIONS ===================
 def generate_stock_alerts(df, threshold=5):
-    """Generate stock alerts."""
     alerts = []
     for _, row in df.iterrows():
         if row.get("Stock_Remaining", 0) < threshold:
@@ -83,7 +58,6 @@ def generate_stock_alerts(df, threshold=5):
     return alerts
 
 def generate_expiry_alerts(df, days_threshold=7):
-    """Generate expiry alerts."""
     alerts = []
     today = datetime.today()
     for _, row in df.iterrows():
@@ -99,12 +73,20 @@ def generate_expiry_alerts(df, days_threshold=7):
             alerts.append(f"{row['Product_Name']} is expiring in {days_left} day(s).")
     return alerts
 
+def send_pushover_notification(user_key, api_token, message):
+    url = "https://api.pushover.net/1/messages.json"
+    data = {"token": api_token, "user": user_key, "message": message}
+    try:
+        requests.post(url, data=data)
+    except Exception as e:
+        st.error(f"Pushover error: {e}")
+
 # =================== PAGE CONFIG ===================
 st.set_page_config(page_title="StockSense - Retail Optimizer", layout="wide", page_icon="📊")
 st.markdown("<style>.main{background-color:#f7f9fc;}</style>", unsafe_allow_html=True)
 st.title("📊 StockSense - Retail Optimizer")
 
-# =================== LOAD DATA ===================
+# =================== LOAD DATA WITH FALLBACK ===================
 stock_threshold = st.sidebar.slider("Stock Alert Threshold", 1, 100, 20)
 expiry_days = st.sidebar.slider("Expiry Alert Days", 1, 30, 7)
 
@@ -114,25 +96,23 @@ if uploaded_file is not None:
     try:
         data = pd.read_csv(uploaded_file)
         st.success("✅ CSV file loaded successfully!")
-        save_csv_to_db(data)  # Save uploaded CSV into DB
+        # IMPORTANT: NO saving to database here per your requirement
     except Exception as e:
         st.error(f"❌ Error reading CSV: {e}")
         st.stop()
 else:
-    st.info("📂 No CSV uploaded, loading from database...")
+    st.info("📂 No CSV uploaded, loading data from database...")
     data = load_data_from_db()
 
-# If no data, stop
 if data.empty:
-    st.warning("⚠️ No data available to display.")
+    st.warning("⚠️ No data available to display from CSV or database.")
     st.stop()
 
-# Process expiry dates
+# =================== PROCESS DATA ===================
 data["Expiry_Date"] = pd.to_datetime(data["Expiry_Date"], errors="coerce")
 today = pd.to_datetime(datetime.today().date())
 data["Days_To_Expiry"] = (data["Expiry_Date"] - today).dt.days
 
-# Generate alerts
 stock_alerts = generate_stock_alerts(data, threshold=stock_threshold)
 expiry_alerts = generate_expiry_alerts(data, days_threshold=expiry_days)
 total_alerts_count = len(stock_alerts) + len(expiry_alerts)
