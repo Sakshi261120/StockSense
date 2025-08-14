@@ -10,15 +10,21 @@ import joblib
 import smtplib
 from email.message import EmailMessage
 
+# POS receipt integration
+try:
+    from pos_generator import generate_pos_receipt
+    POS_AVAILABLE = True
+except ModuleNotFoundError:
+    POS_AVAILABLE = False
+
 # ================= CONFIG =================
-DB_PATH = os.path.abspath("retail_data.db")  # Absolute path to your SQLite DB
+DB_PATH = os.path.abspath("retail_data.db")  # SQLite DB path
 
 # Pushover API keys
 PUSHOVER_USER_KEY = "umqpi3kryezvwo9mjpqju5qc5j59kx"
 PUSHOVER_API_TOKEN = "aue6x29a79caihi7pt4g27yoef4vv3"
 
 # ================= Helper Functions =================
-
 def load_data():
     if not os.path.exists(DB_PATH):
         st.error(f"Database file not found at {DB_PATH}")
@@ -34,11 +40,7 @@ def load_data():
 
 def send_pushover_notification(user_key, api_token, message):
     url = "https://api.pushover.net/1/messages.json"
-    data = {
-        "token": api_token,
-        "user": user_key,
-        "message": message,
-    }
+    data = {"token": api_token, "user": user_key, "message": message}
     try:
         response = requests.post(url, data=data)
         return response.status_code == 200
@@ -70,9 +72,7 @@ def generate_expiry_alerts(df, days_threshold=7):
     return alerts
 
 # ================= Streamlit UI =================
-
 st.set_page_config(page_title="StockSense - Retail Optimizer", layout="wide", page_icon="📊")
-
 st.title("Welcome to StockSense")
 st.write(f"Current working directory: {os.getcwd()}")
 
@@ -119,14 +119,21 @@ menu_items = [
     "Price Optimization",
     "Stock Alerts",
     "Expiry Alerts",
-    "Raw Data",
-    f"🔔 Notifications ({total_alerts_count})" if total_alerts_count > 0 else "🔔 Notifications"
+    "Raw Data"
 ]
+
+if POS_AVAILABLE:
+    menu_items.append("🧾 Generate POS Receipt")
+
+if total_alerts_count > 0:
+    menu_items.append(f"🔔 Notifications ({total_alerts_count})")
+else:
+    menu_items.append("🔔 Notifications")
 
 st.sidebar.markdown("## 📌 Navigation")
 menu = st.sidebar.radio("Go to", menu_items)
 st.sidebar.markdown("---")
-st.sidebar.markdown("Developed by: *GROUP 1*")
+st.sidebar.markdown("Developed by: **GROUP 1**")
 
 # --- Dashboard ---
 if menu == "Dashboard":
@@ -277,20 +284,26 @@ elif menu == "Raw Data":
         csv_raw = data.to_csv(index=False).encode('utf-8')
         st.download_button("Download CSV", csv_raw, "sales_data.csv", "text/csv")
 
+# --- POS Receipt Generation ---
+elif menu == "🧾 Generate POS Receipt":
+    st.header("Generate POS Receipt")
+    if not POS_AVAILABLE:
+        st.error("POS receipt feature is unavailable. Please install 'reportlab' library.")
+    elif data.empty:
+        st.warning("No data available to generate receipt.")
+    else:
+        st.subheader("Preview of current sales data")
+        st.dataframe(data[["Product_Name", "Quantity_Sold", "Unit_Price"]])
+        if st.button("Generate POS Receipt"):
+            sales_data = data.to_dict(orient="records")
+            receipt_path = generate_pos_receipt(sales_data)
+            st.success(f"Receipt generated: {receipt_path}")
+            with open(receipt_path, "rb") as f:
+                st.download_button("Download Receipt", f, file_name=receipt_path.split("/")[-1])
+
 # --- Footer ---
 st.markdown("---")
 st.markdown("<div style='text-align: center;'>Made with ❤️ using Streamlit | Project: MSIT405</div>", unsafe_allow_html=True)
-
-
-
-
-
-
-
-
-
-
-
 
 
 
