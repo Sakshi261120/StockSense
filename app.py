@@ -109,22 +109,45 @@ else:
 stock_threshold = st.sidebar.slider("Stock Alert Threshold", 1, 100, 20)
 expiry_days = st.sidebar.slider("Expiry Alert Days", 1, 30, 7)
 
+# --- Simulate Real-Time Sales ---
+st.sidebar.markdown("## 🛒 Simulate Sale (Real-Time Demo)")
+
+if not data.empty:
+    product_list = data["Product_Name"].unique().tolist()
+    sold_product = st.sidebar.selectbox("Select Product Sold", product_list)
+    sold_qty = st.sidebar.number_input("Quantity Sold", min_value=1, max_value=100, value=1)
+
+    if st.sidebar.button("Add Sale"):
+        index = data[data["Product_Name"] == sold_product].index[0]
+        data.at[index, "Quantity_Sold"] += sold_qty
+        data.at[index, "Stock_Remaining"] -= sold_qty
+        if "Unit_Price" in data.columns:
+            data.at[index, "Revenue"] += data.at[index, "Unit_Price"] * sold_qty
+        today = pd.to_datetime(datetime.today().date())
+        data['Days_To_Expiry'] = (data['Expiry_Date'] - today).dt.days
+
+        st.sidebar.success(f"Added {sold_qty} units of {sold_product}!")
+
+        # Update alerts
+        stock_alerts = generate_stock_alerts(data, stock_threshold)
+        expiry_alerts = generate_expiry_alerts(data, expiry_days)
+
+        # Update POS receipt automatically
+        if POS_AVAILABLE:
+            sales_data = data.to_dict(orient="records")
+            receipt_path = generate_pos_receipt(sales_data)
+            st.session_state['receipt_path'] = receipt_path
+            st.sidebar.success("POS Receipt updated automatically!")
+
+# Generate alerts for initial load
 stock_alerts = generate_stock_alerts(data, stock_threshold) if not data.empty else []
 expiry_alerts = generate_expiry_alerts(data, expiry_days) if not data.empty else []
 
 total_alerts_count = len(stock_alerts) + len(expiry_alerts)
 
-menu_items = [
-    "Dashboard",
-    "Price Optimization",
-    "Stock Alerts",
-    "Expiry Alerts",
-    "Raw Data"
-]
-
+menu_items = ["Dashboard", "Price Optimization", "Stock Alerts", "Expiry Alerts", "Raw Data"]
 if POS_AVAILABLE:
     menu_items.append("🧾 Generate POS Receipt")
-
 if total_alerts_count > 0:
     menu_items.append(f"🔔 Notifications ({total_alerts_count})")
 else:
@@ -160,8 +183,7 @@ if menu == "Dashboard":
 # --- Price Optimization ---
 elif menu == "Price Optimization":
     st.subheader("🔧 Train Model & 📊 Predict Prices")
-
-    train_file = st.file_uploader("Upload CSV for training (must have Quantity_Sold and Unit_Price)", type=["csv"], key="train")
+    train_file = st.file_uploader("Upload CSV for training", type=["csv"], key="train")
     if train_file:
         try:
             df_train = pd.read_csv(train_file)
@@ -173,11 +195,11 @@ elif menu == "Price Optimization":
                 joblib.dump(model, "price_model.pkl")
                 st.success("Model trained and saved as 'price_model.pkl'")
             else:
-                st.error("CSV must contain 'Quantity_Sold' and 'Unit_Price' columns")
+                st.error("CSV must contain 'Quantity_Sold' and 'Unit_Price'")
         except Exception as e:
             st.error(f"Training failed: {e}")
 
-    pred_file = st.file_uploader("Upload CSV for prediction (must have Quantity_Sold)", type=["csv"], key="predict")
+    pred_file = st.file_uploader("Upload CSV for prediction", type=["csv"], key="predict")
     if pred_file:
         try:
             model = joblib.load("price_model.pkl")
@@ -188,7 +210,7 @@ elif menu == "Price Optimization":
                 csv_data = df_pred.to_csv(index=False).encode("utf-8")
                 st.download_button("Download Predictions CSV", csv_data, "predictions.csv", "text/csv")
             else:
-                st.error("CSV must contain 'Quantity_Sold' column")
+                st.error("CSV must contain 'Quantity_Sold'")
         except FileNotFoundError:
             st.info("No trained model found. Please train the model first.")
         except Exception as e:
@@ -210,32 +232,6 @@ elif menu == "Stock Alerts":
             csv_low_stock = low_stock.to_csv(index=False).encode('utf-8')
             st.download_button("Download Low Stock Report", csv_low_stock, "low_stock_report.csv", "text/csv")
 
-            # Email sending UI
-            st.subheader("Send Low Stock Report via Email")
-            recipient = st.text_input("Recipient Email")
-            if st.button("Send Email"):
-                if recipient:
-                    try:
-                        gmail_user = 'your_email@gmail.com'        # Replace with your email
-                        gmail_password = 'your_app_password'       # Replace with your app password
-
-                        msg = EmailMessage()
-                        msg['Subject'] = "Low Stock Alert"
-                        msg['From'] = gmail_user
-                        msg['To'] = recipient
-                        msg.set_content(f"Low stock report attached. {len(low_stock)} products below threshold {threshold}.")
-
-                        msg.add_attachment(csv_low_stock, filename="low_stock_report.csv")
-
-                        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-                            smtp.login(gmail_user, gmail_password)
-                            smtp.send_message(msg)
-                        st.success("Email sent successfully!")
-                    except Exception as e:
-                        st.error(f"Failed to send email: {e}")
-                else:
-                    st.warning("Please enter a valid email address")
-
 # --- Expiry Alerts ---
 elif menu == "Expiry Alerts":
     st.header("Expiry Date Alerts")
@@ -252,13 +248,12 @@ elif menu == "Expiry Alerts":
             csv_expiry = expiring_soon.to_csv(index=False).encode('utf-8')
             st.download_button("Download Expiry Report", csv_expiry, "expiry_report.csv", "text/csv")
 
-# --- Notifications Center ---
+# --- Notifications ---
 elif menu.startswith("🔔 Notifications"):
     st.header("Notifications Center")
     if data.empty:
         st.warning("No data loaded")
     else:
-        # Show alerts
         if stock_alerts:
             st.subheader("Stock Alerts")
             for alert in stock_alerts:
@@ -270,9 +265,6 @@ elif menu.startswith("🔔 Notifications"):
             for alert in expiry_alerts:
                 st.warning(alert)
                 send_pushover_notification(PUSHOVER_USER_KEY, PUSHOVER_API_TOKEN, f"Expiry Alert: {alert}")
-
-        if not stock_alerts and not expiry_alerts:
-            st.success("No active alerts. Inventory looks good.")
 
 # --- Raw Data ---
 elif menu == "Raw Data":
@@ -288,22 +280,31 @@ elif menu == "Raw Data":
 elif menu == "🧾 Generate POS Receipt":
     st.header("Generate POS Receipt")
     if not POS_AVAILABLE:
-        st.error("POS receipt feature is unavailable. Please install 'reportlab' library.")
+        st.error("POS receipt feature is unavailable. Install 'reportlab'.")
     elif data.empty:
         st.warning("No data available to generate receipt.")
     else:
         st.subheader("Preview of current sales data")
         st.dataframe(data[["Product_Name", "Quantity_Sold", "Unit_Price"]])
-        if st.button("Generate POS Receipt"):
-            sales_data = data.to_dict(orient="records")
-            receipt_path = generate_pos_receipt(sales_data)
-            st.success(f"Receipt generated: {receipt_path}")
+
+        if 'receipt_path' in st.session_state:
+            receipt_path = st.session_state['receipt_path']
+            st.success(f"Latest POS receipt generated: {receipt_path}")
             with open(receipt_path, "rb") as f:
                 st.download_button("Download Receipt", f, file_name=receipt_path.split("/")[-1])
+        else:
+            if st.button("Generate POS Receipt"):
+                sales_data = data.to_dict(orient="records")
+                receipt_path = generate_pos_receipt(sales_data)
+                st.session_state['receipt_path'] = receipt_path
+                st.success(f"Receipt generated: {receipt_path}")
+                with open(receipt_path, "rb") as f:
+                    st.download_button("Download Receipt", f, file_name=receipt_path.split("/")[-1])
 
 # --- Footer ---
 st.markdown("---")
 st.markdown("<div style='text-align: center;'>Made with ❤️ using Streamlit | Project: MSIT405</div>", unsafe_allow_html=True)
+
 
 
 
