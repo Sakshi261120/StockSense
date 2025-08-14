@@ -101,7 +101,7 @@ stock_threshold = st.sidebar.slider("Stock Alert Threshold", 1, 100, 20)
 expiry_days = st.sidebar.slider("Expiry Alert Days", 1, 30, 7)
 
 # --- Real-Time Sale Demo ---
-st.sidebar.markdown("## 🛒 Real-Time Sale Demo")
+st.sidebar.markdown("## 🛒 Real-Time Sale ")
 if not data.empty:
     product_list = data["Product_Name"].unique().tolist()
     sold_product = st.sidebar.selectbox("Select Product Sold", product_list)
