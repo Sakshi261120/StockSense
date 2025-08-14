@@ -6,4 +6,5 @@ python-barcode
 pillow
 joblib
 numpy
-
+reportlab
+request
