@@ -7,4 +7,5 @@ pillow
 joblib
 numpy
 reportlab
-request
+requests
+
