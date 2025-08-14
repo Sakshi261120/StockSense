@@ -109,9 +109,8 @@ else:
 stock_threshold = st.sidebar.slider("Stock Alert Threshold", 1, 100, 20)
 expiry_days = st.sidebar.slider("Expiry Alert Days", 1, 30, 7)
 
-# --- Simulate Real-Time Sales ---
+# --- Simulate Real-Time Sales (Demo only, no POS generation) ---
 st.sidebar.markdown("## 🛒 Simulate Sale (Real-Time Demo)")
-
 if not data.empty:
     product_list = data["Product_Name"].unique().tolist()
     sold_product = st.sidebar.selectbox("Select Product Sold", product_list)
@@ -128,16 +127,9 @@ if not data.empty:
 
         st.sidebar.success(f"Added {sold_qty} units of {sold_product}!")
 
-        # Update alerts
+        # Update alerts only
         stock_alerts = generate_stock_alerts(data, stock_threshold)
         expiry_alerts = generate_expiry_alerts(data, expiry_days)
-
-        # Update POS receipt automatically
-        if POS_AVAILABLE:
-            sales_data = data.to_dict(orient="records")
-            receipt_path = generate_pos_receipt(sales_data)
-            st.session_state['receipt_path'] = receipt_path
-            st.sidebar.success("POS Receipt updated automatically!")
 
 # Generate alerts for initial load
 stock_alerts = generate_stock_alerts(data, stock_threshold) if not data.empty else []
@@ -287,19 +279,12 @@ elif menu == "🧾 Generate POS Receipt":
         st.subheader("Preview of current sales data")
         st.dataframe(data[["Product_Name", "Quantity_Sold", "Unit_Price"]])
 
-        if 'receipt_path' in st.session_state:
-            receipt_path = st.session_state['receipt_path']
-            st.success(f"Latest POS receipt generated: {receipt_path}")
+        if st.button("Generate POS Receipt"):
+            sales_data = data.to_dict(orient="records")
+            receipt_path = generate_pos_receipt(sales_data)
+            st.success(f"Receipt generated: {receipt_path}")
             with open(receipt_path, "rb") as f:
                 st.download_button("Download Receipt", f, file_name=receipt_path.split("/")[-1])
-        else:
-            if st.button("Generate POS Receipt"):
-                sales_data = data.to_dict(orient="records")
-                receipt_path = generate_pos_receipt(sales_data)
-                st.session_state['receipt_path'] = receipt_path
-                st.success(f"Receipt generated: {receipt_path}")
-                with open(receipt_path, "rb") as f:
-                    st.download_button("Download Receipt", f, file_name=receipt_path.split("/")[-1])
 
 # --- Footer ---
 st.markdown("---")
