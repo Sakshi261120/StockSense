@@ -155,6 +155,7 @@ if menu == "Dashboard":
     if data.empty:
         st.warning("No data to display")
     else:
+        # Metrics
         total_revenue = data["Revenue"].sum()
         total_items = data["Quantity_Sold"].sum()
         unique_products = data["Product_Name"].nunique()
@@ -164,13 +165,21 @@ if menu == "Dashboard":
         col2.metric("🛒 Items Sold", total_items)
         col3.metric("📦 Unique Products", unique_products)
 
+        # Real-time top products chart
+        st.subheader("💰 Top 10 Products by Revenue (Live)")
         top_products = data.groupby("Product_Name")["Revenue"].sum().sort_values(ascending=False).head(10)
         fig = px.bar(top_products, x=top_products.index, y=top_products.values,
                      labels={"x": "Product", "y": "Revenue (₹)"},
-                     title="💰 Top 10 Products by Revenue",
-                     color_discrete_sequence=["#3498db"])
+                     color=top_products.values,
+                     color_continuous_scale="Blues",
+                     title="Top 10 Products by Revenue")
         fig.update_layout(xaxis_tickangle=-45)
         st.plotly_chart(fig, use_container_width=True)
+
+        # Optional: live table for recent sales
+        st.subheader("🛒 Latest Sales Simulation")
+        st.dataframe(data[["Product_Name", "Quantity_Sold", "Stock_Remaining", "Revenue"]].sort_values(
+            by="Quantity_Sold", ascending=False).head(10))
 
 # --- Price Optimization ---
 elif menu == "Price Optimization":
