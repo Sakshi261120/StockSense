@@ -97,13 +97,20 @@ if not data.empty:
     product_list = data["Product_Name"].unique().tolist()
     sold_product = st.sidebar.selectbox("Select Product Sold", product_list)
     sold_qty = st.sidebar.number_input("Quantity Sold", min_value=1, max_value=100, value=1)
+    
     if st.sidebar.button("Complete Sale"):
         idx = data[data["Product_Name"] == sold_product].index[0]
-        data.at[idx, "Quantity_Sold"] += sold_qty
-        data.at[idx, "Stock_Remaining"] -= sold_qty
-        data.at[idx, "Revenue"] += data.at[idx, "Unit_Price"] * sold_qty
-        data['Days_To_Expiry'] = (data['Expiry_Date'] - today).dt.days
-        st.sidebar.success(f"Sale completed: {sold_qty} x {sold_product}")
+        current_stock = data.at[idx, "Stock_Remaining"]
+
+        if sold_qty > current_stock:
+            st.sidebar.error(f"Cannot sell {sold_qty} units. Only {current_stock} left in stock!")
+        else:
+            data.at[idx, "Quantity_Sold"] += sold_qty
+            data.at[idx, "Stock_Remaining"] -= sold_qty
+            data.at[idx, "Revenue"] += data.at[idx, "Unit_Price"] * sold_qty
+            data['Days_To_Expiry'] = (data['Expiry_Date'] - today).dt.days
+            st.sidebar.success(f"Sale completed: {sold_qty} x {sold_product}")
+
 
 # ================= Alerts =================
 stock_alerts = generate_stock_alerts(data, stock_threshold) if not data.empty else []
