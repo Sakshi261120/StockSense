@@ -7,15 +7,6 @@ from datetime import datetime
 import requests
 from sklearn.linear_model import LinearRegression
 import joblib
-from email.message import EmailMessage
-import smtplib
-
-# POS receipt integration
-try:
-    from pos_generator import generate_pos_receipt
-    POS_AVAILABLE = True
-except ModuleNotFoundError:
-    POS_AVAILABLE = False
 
 # ================= CONFIG =================
 DB_PATH = os.path.abspath("retail_data.db")  # SQLite DB path
@@ -114,29 +105,14 @@ if not data.empty:
         data['Days_To_Expiry'] = (data['Expiry_Date'] - today).dt.days
         st.sidebar.success(f"Sale completed: {sold_qty} x {sold_product}")
 
-        # Generate POS receipt only for this transaction
-        if POS_AVAILABLE:
-            sale_record = [{
-                "Product_Name": sold_product,
-                "Quantity_Sold": sold_qty,
-                "Unit_Price": data.at[idx, "Unit_Price"],
-                "Revenue": data.at[idx, "Unit_Price"] * sold_qty
-            }]
-            receipt_path = generate_pos_receipt(sale_record)
-            st.sidebar.success("POS receipt generated!")
-            st.session_state['latest_receipt'] = receipt_path
-
 # ================= Alerts =================
 stock_alerts = generate_stock_alerts(data, stock_threshold) if not data.empty else []
 expiry_alerts = generate_expiry_alerts(data, expiry_days) if not data.empty else []
 
 # ================= Navigation =================
 menu_items = ["Dashboard", "Price Optimization", "Stock Alerts", "Expiry Alerts", "Raw Data"]
-if POS_AVAILABLE:
-    menu_items.append("🧾 POS Receipts")
 menu_items.append(f"🔔 Notifications ({len(stock_alerts) + len(expiry_alerts)})")
 menu = st.sidebar.radio("📌 Navigation", menu_items)
-
 st.sidebar.markdown("---")
 st.sidebar.markdown("Developed by: **GROUP 1**")
 
@@ -239,29 +215,6 @@ elif menu == "Raw Data":
         st.dataframe(data)
         csv_raw = data.to_csv(index=False).encode('utf-8')
         st.download_button("Download CSV", csv_raw, "sales_data.csv", "text/csv")
-
-# ================= POS Receipts =================
-elif menu == "🧾 POS Receipts":
-    st.header("POS Receipt Generation")
-    if not POS_AVAILABLE:
-        st.error("POS feature unavailable. Install 'reportlab'.")
-    elif data.empty:
-        st.warning("No data available")
-    else:
-        st.subheader("Preview Sales Data")
-        st.dataframe(data[["Product_Name", "Quantity_Sold", "Unit_Price"]])
-        if 'latest_receipt' in st.session_state:
-            receipt_path = st.session_state['latest_receipt']
-            st.success(f"Latest POS receipt: {receipt_path}")
-            with open(receipt_path, "rb") as f:
-                st.download_button("Download Receipt", f, file_name=os.path.basename(receipt_path))
-        else:
-            if st.button("Generate Full POS Receipt"):
-                receipt_path = generate_pos_receipt(data.to_dict(orient="records"))
-                st.session_state['latest_receipt'] = receipt_path
-                st.success(f"Receipt generated: {receipt_path}")
-                with open(receipt_path, "rb") as f:
-                    st.download_button("Download Receipt", f, file_name=os.path.basename(receipt_path))
 
 # ================= Footer =================
 st.markdown("---")
