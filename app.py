@@ -9,8 +9,6 @@ from sklearn.linear_model import LinearRegression
 import joblib
 from email.message import EmailMessage
 import smtplib
-import threading
-import time
 
 # POS receipt integration
 try:
@@ -18,13 +16,6 @@ try:
     POS_AVAILABLE = True
 except ModuleNotFoundError:
     POS_AVAILABLE = False
-
-# POS simulator import
-try:
-    from pos_simulator import generate_pos_transaction
-    POS_SIMULATOR_AVAILABLE = True
-except ModuleNotFoundError:
-    POS_SIMULATOR_AVAILABLE = False
 
 # ================= CONFIG =================
 DB_PATH = os.path.abspath("retail_data.db")  # SQLite DB path
@@ -138,34 +129,6 @@ if not data.empty:
 # ================= Alerts =================
 stock_alerts = generate_stock_alerts(data, stock_threshold) if not data.empty else []
 expiry_alerts = generate_expiry_alerts(data, expiry_days) if not data.empty else []
-
-# ================= Background POS Simulator Listener =================
-if POS_SIMULATOR_AVAILABLE and not data.empty:
-    def start_pos_listener():
-        def listen():
-            while True:
-                transaction = generate_pos_transaction()
-                if transaction:
-                    idx_list = data.index[data["Product_Name"] == transaction["Product_Name"]].tolist()
-                    if idx_list:
-                        idx = idx_list[0]
-                        data.at[idx, "Quantity_Sold"] += transaction["Quantity_Sold"]
-                        data.at[idx, "Stock_Remaining"] -= transaction["Quantity_Sold"]
-                        data.at[idx, "Revenue"] += transaction["Quantity_Sold"] * data.at[idx, "Unit_Price"]
-                        data['Days_To_Expiry'] = (data['Expiry_Date'] - today).dt.days
-
-                        # Generate POS receipt
-                        if POS_AVAILABLE:
-                            receipt_path = generate_pos_receipt([transaction])
-                            st.session_state['latest_receipt'] = receipt_path
-                            print(f"New POS receipt generated: {receipt_path}")
-
-                time.sleep(5)  # check every 5 seconds
-
-        thread = threading.Thread(target=listen, daemon=True)
-        thread.start()
-
-    start_pos_listener()
 
 # ================= Navigation =================
 menu_items = ["Dashboard", "Price Optimization", "Stock Alerts", "Expiry Alerts", "Raw Data"]
@@ -303,6 +266,15 @@ elif menu == "🧾 POS Receipts":
 # ================= Footer =================
 st.markdown("---")
 st.markdown("<div style='text-align: center;'>Made with ❤️ using Streamlit | Project: MSIT405</div>", unsafe_allow_html=True)
+
+
+
+
+
+
+
+
+
 
 
 
