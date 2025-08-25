@@ -1,1 +1,12 @@
+# Example secrets
+api_key = "261120"
+db_password = "161097"
+
+[theme]
+primaryColor = "#4B79FF"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F0F2F6"
+textColor = "#0E1117"
+font = "sans serif"
+
 
